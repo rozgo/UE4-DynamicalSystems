@@ -40,7 +40,9 @@ public class DynamicalSystems : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-				// ... add private dependencies that you statically link with here ...	
+"CoreUObject",
+"Engine"
+				// ... add private dependencies that you statically link with here ...
 			}
 			);
 		

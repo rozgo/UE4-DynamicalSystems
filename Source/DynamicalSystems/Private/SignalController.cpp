@@ -1,5 +1,5 @@
-#include "DynamicalSystems.h"
 #include "SignalController.h"
+#include "DynamicalSystemsPrivatePCH.h"
 
 USignalController::USignalController()
 {

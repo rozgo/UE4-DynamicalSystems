@@ -1,8 +1,7 @@
-#include "DynamicalSystems.h"
+#include "ForceDirectedController.h"
 #include "DynamicalUtil.h"
-// #include "ForceDirectedController.h"
+#include "DynamicalSystemsPrivatePCH.h"
 #include <random>
-
 
 UForceDirectedController::UForceDirectedController()
 {

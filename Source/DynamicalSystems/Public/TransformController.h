@@ -4,7 +4,7 @@
 #include "TransformController.generated.h"
 
 UCLASS( ClassGroup=(DynamicalSystems), meta=(BlueprintSpawnableComponent) )
-class UTransformController : public UActorComponent
+class DYNAMICALSYSTEMS_API UTransformController : public UActorComponent
 {
 	GENERATED_BODY()
     

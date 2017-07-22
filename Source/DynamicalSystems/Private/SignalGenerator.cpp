@@ -1,6 +1,6 @@
-#include "DynamicalSystems.h"
-#include "DynamicalUtil.h"
 #include "SignalGenerator.h"
+#include "DynamicalUtil.h"
+#include "DynamicalSystemsPrivatePCH.h"
 
 static float NORMINV (float probability, float mean, float standard_deviation);
 

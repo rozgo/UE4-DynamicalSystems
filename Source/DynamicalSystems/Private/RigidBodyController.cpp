@@ -1,5 +1,5 @@
-#include "DynamicalSystems.h"
 #include "RigidBodyController.h"
+#include "DynamicalSystemsPrivatePCH.h"
 
 URigidBodyController::URigidBodyController()
 {
