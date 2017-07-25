@@ -35,7 +35,7 @@ void UTransformController::TickComponent( float DeltaTime, ELevelTick TickType, 
 		RotationError = FQuat::Error(RotationSetpoint, RotationFeedback);
 		auto RotationProportional = RotationError;
 		RotationIntegral = RotationIntegral + RotationError * DeltaTime;
-		auto RotationDerivative = (RotationError - RotationLastError) / DeltaTime;
+		auto RotationDerivative = -(RotationError - RotationLastError) / DeltaTime;
 		RotationLastError = RotationError;
 		RotationControl = RotationKp * RotationProportional + RotationKi * RotationIntegral + RotationKd * RotationDerivative;
 

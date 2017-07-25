@@ -50,4 +50,14 @@ float UDynamicalUtil::StandardDeviationOfFloatArray(const TArray<float>& Samples
     return FMath::Sqrt(V);
 }
 
+FVector UDynamicalUtil::CubicBezier(float Time, FVector P0, FVector P1, FVector P2, FVector P3)
+{
+	// p = (1-t)^3*p0 + 3*t*(1-t)^2*p1 + 3*t^2*(1-t)*p2 + t^3*p3
+	return
+		P0 * FMath::Pow(1.f - Time, 3.f) +
+		P1 * 3.f * Time * FMath::Pow(1.f - Time, 2.f) +
+		P2 * 3.f * FMath::Pow(Time, 2.f) * (1.f - Time) +
+		P3 * FMath::Pow(Time, 3.f);
+}
+
 
