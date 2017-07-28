@@ -1,0 +1,18 @@
+[package]
+name = "rusty-dynamics"
+version = "0.1.0"
+authors = ["Alex Rozgo <alex.rozgo@gmail.com>"]
+
+[dependencies]
+byteorder = "1.0.0"
+tokio-core = "0.1"
+tokio-io = "0.1"
+tokio-timer = "0.1"
+futures = "0.1"
+pretty_env_logger = "0.1"
+chrono = "0.4"
+uuid = { version = "0.4", features = ["v4"] }
+
+[lib]
+name = "RustyDynamics"
+crate-type = ["dylib"]

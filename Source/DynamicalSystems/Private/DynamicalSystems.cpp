@@ -4,7 +4,9 @@
 #include "Core.h"
 #include "ModuleManager.h"
 #include "IPluginManager.h"
-#include "ExampleLibrary.h"
+#include "RustyDynamics.h"
+
+#include <string>
 
 #define LOCTEXT_NAMESPACE "FDynamicalSystemsModule"
 
@@ -20,15 +22,21 @@ void FDynamicalSystemsModule::StartupModule()
 #if PLATFORM_WINDOWS
 	LibraryPath = FPaths::Combine(*BaseDir, TEXT("Binaries/ThirdParty/DynamicalSystemsLibrary/Win64/ExampleLibrary.dll"));
 #elif PLATFORM_MAC
-    LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/DynamicalSystemsLibrary/Mac/Release/libExampleLibrary.dylib"));
+    LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/RustyDynamics/target/Debug/libRustyDynamics.dylib"));
 #endif // PLATFORM_WINDOWS
 
-	ExampleLibraryHandle = !LibraryPath.IsEmpty() ? FPlatformProcess::GetDllHandle(*LibraryPath) : nullptr;
+	RustyDynamicsHandle = !LibraryPath.IsEmpty() ? FPlatformProcess::GetDllHandle(*LibraryPath) : nullptr;
 
-	if (ExampleLibraryHandle)
+	if (RustyDynamicsHandle)
 	{
 		// Call the test function in the third party library that opens a message box
-		ExampleLibraryFunction();
+        
+		//ExampleLibraryFunction();
+//        FString CoordinateString = FString::Printf(TEXT("rd_get_pow_2_of_int32 %i"), rd_get_pow_2_of_int32(12));
+//        FMessageDialog::Open(EAppMsgType::Ok, FText::AsCultureInvariant(CoordinateString));
+        
+//        const char* addr = std::string("127.shit.0.0:8080").c_str();
+//        rd_netclient_new(addr);
 	}
 	else
 	{
@@ -42,8 +50,8 @@ void FDynamicalSystemsModule::ShutdownModule()
 	// we call this function before unloading the module.
 
 	// Free the dll handle
-	FPlatformProcess::FreeDllHandle(ExampleLibraryHandle);
-	ExampleLibraryHandle = nullptr;
+	FPlatformProcess::FreeDllHandle(RustyDynamicsHandle);
+	RustyDynamicsHandle = nullptr;
 }
 
 #undef LOCTEXT_NAMESPACE
