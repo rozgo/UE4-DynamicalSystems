@@ -4,7 +4,7 @@
 #include "RigidBodyController.generated.h"
 
 UCLASS( ClassGroup=(DynamicalSystems), meta=(BlueprintSpawnableComponent) )
-class URigidBodyController : public UActorComponent
+class DYNAMICALSYSTEMS_API URigidBodyController : public UActorComponent
 {
 	GENERATED_BODY()
     

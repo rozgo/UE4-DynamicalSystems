@@ -4,6 +4,8 @@
 #include "RustyDynamics.h"
 #include "NetClient.generated.h"
 
+class UNetRigidBody;
+
 UCLASS( ClassGroup=(DynamicalSystems), meta=(BlueprintSpawnableComponent) )
 class DYNAMICALSYSTEMS_API ANetClient : public AActor
 {
@@ -12,6 +14,8 @@ class DYNAMICALSYSTEMS_API ANetClient : public AActor
     void* Client = NULL;
     
     float LastTime;
+    
+    void RebuildConsensus();
 
 public:	
 
@@ -24,7 +28,20 @@ protected:
 public:
     virtual void Tick(float DeltaTime) override;
     
+    void RegisterRigidBody(UNetRigidBody* RigidBody);
+    
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
     FString Uuid;
-
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+    TArray<UNetRigidBody*> NetRigidBodies;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+    TMap<FString, float> NetClients;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+    bool ConsensusReached = FALSE;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+    FColor ChosenColor;
 };
