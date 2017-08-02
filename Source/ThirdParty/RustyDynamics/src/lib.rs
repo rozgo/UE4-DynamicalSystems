@@ -4,6 +4,11 @@ extern crate pretty_env_logger;
 extern crate futures;
 extern crate chrono;
 extern crate uuid;
+#[macro_use]
+extern crate serde_derive;
+extern crate bincode;
+
+use bincode::{serialize, deserialize, Infinite};
 
 use std::io;
 use std::net::SocketAddr;
@@ -44,6 +49,11 @@ pub struct Client {
     sender: SyncSink<Vec<u8>>,
     task: Option<std::thread::JoinHandle<()>>,
     queue: SharedQueue<Vec<u8>>,
+}
+
+#[no_mangle]
+pub fn rd_get_pow_2_of_int32(num: u32) -> u32 {
+    num * num
 }
 
 #[no_mangle]
@@ -145,6 +155,25 @@ unsafe fn from_buf_raw<T>(ptr: *const T, elts: usize) -> Vec<T> {
     dst
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct Entity {
+    x: f32,
+    y: f32,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct World(Vec<Entity>);
+
+#[no_mangle]
+pub fn rd_netclient_test_world(world: *const World) {
+    unsafe {
+        let world_cmp = World(vec![Entity { x: 0.0, y: 4.0 }, Entity { x: 10.0, y: 20.5 }]);
+        // let decoded: &Vec<World> = &from_buf_raw(bytes, 1);
+        assert_eq!(world_cmp, *world, "XOXOXOXOXOXOXOXOXOXOXOXOXOXOXO");
+        println!("world: {:?}", *world);
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -152,7 +181,18 @@ mod tests {
 
     #[test]
     fn it_works() {
-        rd_netclient_new();
-        thread::sleep(Duration::from_secs(10000));
+        // rd_netclient_new();
+        // thread::sleep(Duration::from_secs(10000));
+
+        let world = World(vec![Entity { x: 0.0, y: 4.0 }, Entity { x: 10.0, y: 20.5 }]);
+
+        let encoded: Vec<u8> = serialize(&world, Infinite).unwrap();
+
+        // 8 bytes for the length of the vector, 4 bytes per float.
+        assert_eq!(encoded.len(), 8 + 4 * 4);
+
+        let decoded: World = deserialize(&encoded[..]).unwrap();
+
+        assert_eq!(world, decoded);
     }
 }
