@@ -121,8 +121,10 @@ pub fn rd_netclient_open(addr: *const char) -> *mut Client {
 
         let mut core = Core::new().unwrap();
         let handle = core.handle();
-        let server_addr: SocketAddr = "138.68.41.91:8080".parse().unwrap();
-        let local_addr: SocketAddr = "192.168.1.126:0".parse().unwrap();
+        // let server_addr: SocketAddr = "138.68.41.91:8080".parse().unwrap();
+        let server_addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+        // let local_addr: SocketAddr = "192.168.1.126:0".parse().unwrap();
+        let local_addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
         let udp_socket = UdpSocket::bind(&local_addr, &handle).unwrap();
         let (tx, rx) = udp_socket.framed(LineCodec).split();
 
@@ -148,29 +150,76 @@ pub fn rd_netclient_open(addr: *const char) -> *mut Client {
     Box::into_raw(client)
 }
 
-unsafe fn from_buf_raw<T>(ptr: *const T, elts: usize) -> Vec<T> {
-    let mut dst = Vec::with_capacity(elts);
-    dst.set_len(elts);
-    std::ptr::copy(ptr, dst.as_mut_ptr(), elts);
-    dst
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct RigidBody {
+    id: u8,
+    px: f32,
+    py: f32,
+    pz: f32,
+    pw: f32,
+    lx: f32,
+    ly: f32,
+    lz: f32,
+    lw: f32,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct Entity {
+pub struct World {
+    rigid_bodies: Vec<RigidBody>,
+}
+
+#[no_mangle]
+pub fn rd_netclient_push_world(client: *mut Client, world: *const World) {
+    unsafe {
+        let mut msg = vec![1u8];
+        let mut encoded: Vec<u8> = serialize(&(*world), Infinite).unwrap();
+        msg.append(&mut encoded);
+        (*client).sender.send(msg).unwrap();
+    }
+}
+
+#[no_mangle]
+pub fn rd_netclient_dec_world(bytes: *const u8, count: u32) -> *const World {
+    unsafe {
+        let count : usize = count as usize;
+        let mut msg = Vec::with_capacity(count);
+        for i in 0..count {
+            msg.push(*bytes.offset(i as isize));
+        }
+        let world: World = deserialize(&msg[..]).unwrap();
+        let world = Box::new(world);
+        Box::into_raw(world)
+    }
+}
+
+#[no_mangle]
+pub fn rd_netclient_drop_world(world: *mut World) {
+    unsafe { Box::from_raw(world) };
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct TestEntity {
     x: f32,
     y: f32,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct World(Vec<Entity>);
+pub struct TestWorld(Vec<TestEntity>);
 
 #[no_mangle]
-pub fn rd_netclient_test_world(world: *const World) {
+pub fn rd_netclient_test_world(world: *const TestWorld) {
     unsafe {
-        let world_cmp = World(vec![Entity { x: 0.0, y: 4.0 }, Entity { x: 10.0, y: 20.5 }]);
-        // let decoded: &Vec<World> = &from_buf_raw(bytes, 1);
-        assert_eq!(world_cmp, *world, "XOXOXOXOXOXOXOXOXOXOXOXOXOXOXO");
-        println!("world: {:?}", *world);
+        let world_cmp = TestWorld(vec![TestEntity { x: 0.0, y: 4.0 }, TestEntity { x: 10.0, y: 20.5 }]);
+
+        assert_eq!(world_cmp, *world, "raw ffi");
+        println!("raw world: {:?}", *world);
+
+        let encoded: Vec<u8> = serialize(&(*world), Infinite).unwrap();
+        assert_eq!(encoded.len(), 8 + 4 * 4, "compact length");
+
+        let decoded: TestWorld = deserialize(&encoded[..]).unwrap();
+        assert_eq!(world_cmp, decoded, "decoding world");
+        println!("decoded world: {:?}", decoded);
     }
 }
 
@@ -181,18 +230,5 @@ mod tests {
 
     #[test]
     fn it_works() {
-        // rd_netclient_new();
-        // thread::sleep(Duration::from_secs(10000));
-
-        let world = World(vec![Entity { x: 0.0, y: 4.0 }, Entity { x: 10.0, y: 20.5 }]);
-
-        let encoded: Vec<u8> = serialize(&world, Infinite).unwrap();
-
-        // 8 bytes for the length of the vector, 4 bytes per float.
-        assert_eq!(encoded.len(), 8 + 4 * 4);
-
-        let decoded: World = deserialize(&encoded[..]).unwrap();
-
-        assert_eq!(world, decoded);
     }
 }

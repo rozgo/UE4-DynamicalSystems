@@ -29,6 +29,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetRigidBody")
     bool Driving = false;
     
+    bool SyncTarget = false;
+    FVector TargetLocation;
+    FVector TargetLinearVelocity;
+    
 private:
     
     unsigned char* Payload[128];

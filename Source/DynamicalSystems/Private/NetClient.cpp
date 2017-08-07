@@ -18,7 +18,7 @@ void ANetClient::RebuildConsensus()
     int Count = NetClients.Num();
     FRandomStream Rnd(Count);
     
-    TArray<FString> MappedClients;
+    MappedClients.Empty();
     NetClients.GetKeys(MappedClients);
     MappedClients.Sort();
     
@@ -32,7 +32,8 @@ void ANetClient::RebuildConsensus()
 void ANetClient::BeginPlay()
 {
     Super::BeginPlay();
-    LastTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
+    LastPingTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
+    LastBodyTime = LastPingTime;
     if (Client == NULL) {
         const char* addr = std::string("127.shit.0.0:8080").c_str();
         Client = rd_netclient_open(addr);
@@ -58,7 +59,8 @@ void ANetClient::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
     
-    float CurrentTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
+    float CurrentPingTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
+    float CurrentBodyTime = CurrentPingTime;
     
     {
         TArray<int> DeleteList;
@@ -72,6 +74,7 @@ void ANetClient::Tick(float DeltaTime)
             NetRigidBodies.RemoveAt(DeleteList[Idx]);
         }
         if (DeleteList.Num() > 0) {
+            RebuildConsensus();
             return;
         }
     }
@@ -79,7 +82,7 @@ void ANetClient::Tick(float DeltaTime)
     {
         TArray<FString> DeleteList;
         for (auto& Elem : NetClients) {
-            if (Elem.Value > 0 && Elem.Value < CurrentTime) {
+            if (Elem.Value > 0 && Elem.Value < CurrentPingTime) {
                 DeleteList.Add(Elem.Key);
             }
         }
@@ -87,17 +90,52 @@ void ANetClient::Tick(float DeltaTime)
             NetClients.Remove(Key);
         }
         if (DeleteList.Num() > 0) {
+            RebuildConsensus();
             return;
         }
     }
     
     static char Msg[512];
     
-    if (CurrentTime > LastTime + 1) {
+    if (CurrentPingTime > LastPingTime + 1) {
         Msg[0] = 0; // Ping
         strncpy(&Msg[1], TCHAR_TO_UTF8(*Uuid), 36);
         rd_netclient_msg_push(Client, Msg, 37);
-        LastTime = CurrentTime;
+        LastPingTime = CurrentPingTime;
+    }
+    
+    if (CurrentBodyTime > LastBodyTime + 0.1) {
+        TArray<RigidBodyPack> BodyPacks;
+        for (int Idx=0; Idx<NetRigidBodies.Num(); ++Idx) {
+            UNetRigidBody* Body = NetRigidBodies[Idx];
+            if (IsValid(Body) && MappedClients.Num() > Body->NetOwner && MappedClients[Body->NetOwner] == this->Uuid) {
+                AActor* Actor = Body->GetOwner();
+                if (IsValid(Actor)) {
+                    FVector LinearVelocity;
+                    FVector Location = Actor->GetActorLocation();
+                    UStaticMeshComponent* StaticMesh = Actor->FindComponentByClass<UStaticMeshComponent>();
+                    if (StaticMesh) {
+                        LinearVelocity = StaticMesh->GetBodyInstance()->GetUnrealWorldVelocity();
+                        RigidBodyPack pack = {(uint8_t)Body->NetID,
+                            Location.X, Location.Y, Location.Z, 1,
+                            LinearVelocity.X, LinearVelocity.Y, LinearVelocity.Z, 0,
+                        };
+                        BodyPacks.Add(pack);
+                    }
+                }
+            }
+        }
+        
+        if (BodyPacks.Num() > 0) {
+            RustVec WorldRigidBodies;
+            WorldRigidBodies.vec_ptr = (uint64_t)&BodyPacks[0];
+            WorldRigidBodies.vec_cap = BodyPacks.Num() * 2;
+            WorldRigidBodies.vec_len = BodyPacks.Num();
+            WorldPack WorldPack;
+            WorldPack.rigidbodies = WorldRigidBodies;
+            rd_netclient_push_world(Client, &WorldPack);
+        }
+        LastBodyTime = CurrentBodyTime;
     }
     
     uint32_t size = rd_netclient_msg_pop(Client, Msg);
@@ -107,9 +145,31 @@ void ANetClient::Tick(float DeltaTime)
             strncpy(UuidStr, &Msg[1], 36);
             UuidStr[36] = 0;
             FString Key(UuidStr);
-            NetClients.Add(Key, CurrentTime + 5);
+            NetClients.Add(Key, CurrentPingTime + 5);
             RebuildConsensus();
-            UE_LOG(LogTemp, Warning, TEXT("Ping: %s"), *Key);
+        }
+        else if (Msg[0] == 1) { // World
+            WorldPack* WorldPack = rd_netclient_dec_world(&Msg[1], size - 1);
+            uint64_t NumOfBodies = WorldPack->rigidbodies.vec_len;
+            RigidBodyPack* Bodies = (RigidBodyPack*)WorldPack->rigidbodies.vec_ptr;
+            for (auto Idx=0; Idx<NumOfBodies; ++Idx) {
+                FVector Location(Bodies[Idx].px, -Bodies[Idx].py, Bodies[Idx].pz);
+                FVector LinearVelocity(Bodies[Idx].lx, -Bodies[Idx].ly, Bodies[Idx].lz);
+                uint32_t NetID = Bodies[Idx].id;
+                UNetRigidBody** NetRigidBody = NetRigidBodies.FindByPredicate([NetID](const UNetRigidBody* Item) {
+                    return IsValid(Item) && Item->NetID == NetID;
+                });
+                if (NetRigidBody != NULL && *NetRigidBody != NULL) {
+                    (*NetRigidBody)->SyncTarget = true;
+                    (*NetRigidBody)->TargetLocation = Location;
+                    (*NetRigidBody)->TargetLinearVelocity = LinearVelocity;
+//                    AActor* Actor = (*NetRigidBody)->GetOwner();
+////                    if (IsValid(Actor)) {
+//                        Actor->SetActorLocation(Location);
+////                    }
+                }
+            }
+            rd_netclient_drop_world(WorldPack);
         }
     }
     

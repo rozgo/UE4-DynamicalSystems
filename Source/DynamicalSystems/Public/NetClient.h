@@ -13,7 +13,8 @@ class DYNAMICALSYSTEMS_API ANetClient : public AActor
     
     void* Client = NULL;
     
-    float LastTime;
+    float LastPingTime;
+    float LastBodyTime;
     
     void RebuildConsensus();
 
@@ -38,6 +39,9 @@ public:
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
     TMap<FString, float> NetClients;
+    
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+    TArray<FString> MappedClients;
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
     bool ConsensusReached = FALSE;
