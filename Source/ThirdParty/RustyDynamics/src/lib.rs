@@ -178,7 +178,7 @@ pub struct Avatar {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct World {
-    avatar: Avatar,
+    avatar_parts: Vec<Avatar>,
     rigid_bodies: Vec<RigidBody>,
 }
 

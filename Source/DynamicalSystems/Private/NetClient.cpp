@@ -118,11 +118,11 @@ void ANetClient::Tick(float DeltaTime)
                     UStaticMeshComponent* StaticMesh = Actor->FindComponentByClass<UStaticMeshComponent>();
                     if (StaticMesh) {
                         LinearVelocity = StaticMesh->GetBodyInstance()->GetUnrealWorldVelocity();
-                        RigidBodyPack pack = {(uint8_t)Body->NetID,
+                        RigidBodyPack Pack = {(uint8_t)Body->NetID,
                             Location.X, Location.Y, Location.Z, 1,
                             LinearVelocity.X, LinearVelocity.Y, LinearVelocity.Z, 0,
                         };
-                        BodyPacks.Add(pack);
+                        BodyPacks.Add(Pack);
                     }
                 }
             }
@@ -134,18 +134,22 @@ void ANetClient::Tick(float DeltaTime)
         WorldRigidBodies.vec_len = BodyPacks.Num();
         WorldPack WorldPack;
         WorldPack.rigidbodies = WorldRigidBodies;
-		if (IsValid(Avatar)) {
-			WorldPack.avatar.id = Avatar->NetID;
-			FVector Location = Avatar->GetOwner()->GetActorLocation();
-			FQuat Rotation = Avatar->GetOwner()->GetActorRotation().Quaternion();
-			WorldPack.avatar.px = Location.X;
-			WorldPack.avatar.py = Location.Y;
-			WorldPack.avatar.pz = Location.Z;
-			WorldPack.avatar.pw = 1;
-			WorldPack.avatar.rx = Rotation.X;
-			WorldPack.avatar.ry = Rotation.Y;
-			WorldPack.avatar.rz = Rotation.Z;
-			WorldPack.avatar.rw = Rotation.W;
+		if (IsValid(Avatar) && !Avatar->IsNetProxy) {
+			TArray<AvatarPack> AvatarPacks;
+			FVector Locations[] = { Avatar->LocationHMD, Avatar->LocationHandL, Avatar->LocationHandR };
+			FQuat Rotations[] = { Avatar->RotationHMD.Quaternion(), Avatar->RotationHandL.Quaternion(), Avatar->RotationHandR.Quaternion() };
+			for (auto I = 0; I < 3; ++I) {
+				AvatarPack Pack = { (uint8_t)Avatar->NetID,
+					Locations[I].X, Locations[I].Y, Locations[I].Z, 1,
+					Rotations[I].X, Rotations[I].Y, Rotations[I].Z, Rotations[I].W,
+				};
+				AvatarPacks.Add(Pack);
+			}
+			RustVec AvatarParts;
+			AvatarParts.vec_ptr = (uint64_t)&AvatarPacks[0];
+			AvatarParts.vec_cap = 6;
+			AvatarParts.vec_len = 3;
+			WorldPack.avatarparts = AvatarParts;
 		}
         rd_netclient_push_world(Client, &WorldPack);
 
@@ -179,11 +183,18 @@ void ANetClient::Tick(float DeltaTime)
                     (*NetRigidBody)->TargetLinearVelocity = LinearVelocity;
                 }
             }
-			if (IsValid(Avatar)) {
-				FVector Location(WorldPack->avatar.px, WorldPack->avatar.py, WorldPack->avatar.pz);
-				FQuat Orientation(WorldPack->avatar.rx, WorldPack->avatar.ry, WorldPack->avatar.rz, WorldPack->avatar.rw);
-				Avatar->GetOwner()->SetActorLocation(Location);
-				Avatar->GetOwner()->SetActorRotation(Orientation);
+			if (IsValid(Avatar) && Avatar->IsNetProxy) {
+				uint64_t NumOfParts = WorldPack->avatarparts.vec_len;
+				if (NumOfParts >= 3) {
+					AvatarPack* Parts = (AvatarPack*)WorldPack->avatarparts.vec_ptr;
+					Avatar->LocationHMD = FVector(Parts[0].px, Parts[0].py, Parts[0].pz);
+					Avatar->RotationHMD = FRotator(FQuat(Parts[0].rx, Parts[0].ry, Parts[0].rz, Parts[0].rw));
+					Avatar->LocationHandL = FVector(Parts[1].px, Parts[1].py, Parts[1].pz);
+					Avatar->RotationHandL = FRotator(FQuat(Parts[1].rx, Parts[1].ry, Parts[1].rz, Parts[1].rw));
+					Avatar->LocationHandR = FVector(Parts[2].px, Parts[2].py, Parts[2].pz);
+					Avatar->RotationHandR = FRotator(FQuat(Parts[2].rx, Parts[2].ry, Parts[2].rz, Parts[2].rw));
+
+				}
 			}
             rd_netclient_drop_world(WorldPack);
         }

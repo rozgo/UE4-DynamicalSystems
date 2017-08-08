@@ -39,4 +39,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetAvatar")
 	FRotator RotationHandR;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
+	bool IsNetProxy = false;
+
 };

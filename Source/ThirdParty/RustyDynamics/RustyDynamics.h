@@ -13,12 +13,6 @@ extern "C" {
         uint64_t entities_len;
     } TestWorld;
 
-    // typedef struct RustyPing {
-    //     uint64_t uuid_ptr;
-    //     uint64_t uuid_cap;
-    //     uint64_t uuid_len;
-    // } Ping;
-
     typedef struct RustVec {
         uint64_t vec_ptr;
         uint64_t vec_cap;
@@ -40,7 +34,7 @@ extern "C" {
     } RigidBodyPack;
 
     typedef struct WorldPack {
-        AvatarPack avatar;
+        RustVec avatarparts;
         RustVec rigidbodies;
     } WorldPack;
 
