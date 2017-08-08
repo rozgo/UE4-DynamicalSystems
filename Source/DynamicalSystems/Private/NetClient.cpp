@@ -128,28 +128,27 @@ void ANetClient::Tick(float DeltaTime)
             }
         }
         
-        if (BodyPacks.Num() > 0) {
-            RustVec WorldRigidBodies;
-            WorldRigidBodies.vec_ptr = (uint64_t)&BodyPacks[0];
-            WorldRigidBodies.vec_cap = BodyPacks.Num() * 2;
-            WorldRigidBodies.vec_len = BodyPacks.Num();
-            WorldPack WorldPack;
-            WorldPack.rigidbodies = WorldRigidBodies;
-			if (IsValid(Avatar)) {
-				WorldPack.avatar.id = Avatar->NetID;
-				FVector Location = Avatar->GetOwner()->GetActorLocation();
-				FQuat Rotation = Avatar->GetOwner()->GetActorRotation().Quaternion();
-				WorldPack.avatar.px = Location.X;
-				WorldPack.avatar.py = Location.Y;
-				WorldPack.avatar.pz = Location.Z;
-				WorldPack.avatar.pw = 1;
-				WorldPack.avatar.rx = Rotation.X;
-				WorldPack.avatar.ry = Rotation.Y;
-				WorldPack.avatar.rz = Rotation.Z;
-				WorldPack.avatar.rw = Rotation.W;
-			}
-            rd_netclient_push_world(Client, &WorldPack);
-        }
+        RustVec WorldRigidBodies;
+        WorldRigidBodies.vec_ptr = BodyPacks.Num() > 0 ? (uint64_t)&BodyPacks[0] : 0;
+        WorldRigidBodies.vec_cap = BodyPacks.Num() * 2;
+        WorldRigidBodies.vec_len = BodyPacks.Num();
+        WorldPack WorldPack;
+        WorldPack.rigidbodies = WorldRigidBodies;
+		if (IsValid(Avatar)) {
+			WorldPack.avatar.id = Avatar->NetID;
+			FVector Location = Avatar->GetOwner()->GetActorLocation();
+			FQuat Rotation = Avatar->GetOwner()->GetActorRotation().Quaternion();
+			WorldPack.avatar.px = Location.X;
+			WorldPack.avatar.py = Location.Y;
+			WorldPack.avatar.pz = Location.Z;
+			WorldPack.avatar.pw = 1;
+			WorldPack.avatar.rx = Rotation.X;
+			WorldPack.avatar.ry = Rotation.Y;
+			WorldPack.avatar.rz = Rotation.Z;
+			WorldPack.avatar.rw = Rotation.W;
+		}
+        rd_netclient_push_world(Client, &WorldPack);
+
         LastBodyTime = CurrentBodyTime;
     }
     

@@ -11,6 +11,8 @@ class DYNAMICALSYSTEMS_API UNetAvatar : public UActorComponent
 
 public:
 
+	UNetAvatar();
+
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetAvatar")
