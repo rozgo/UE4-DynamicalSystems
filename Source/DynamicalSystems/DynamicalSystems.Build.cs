@@ -30,7 +30,6 @@ public class DynamicalSystems : ModuleRules
 				"Core",
                 "PhysX",
                 "APEX",
-				// "DynamicalSystemsLibrary",
                 "RustyDynamics",
 				"Projects"
 				// ... add other public dependencies that you statically link with here ...
@@ -41,8 +40,8 @@ public class DynamicalSystems : ModuleRules
 		PrivateDependencyModuleNames.AddRange(
 			new string[]
 			{
-"CoreUObject",
-"Engine"
+                "CoreUObject",
+                "Engine"
 				// ... add private dependencies that you statically link with here ...
 			}
 			);

@@ -19,4 +19,4 @@ bincode = "0.8"
 
 [lib]
 name = "RustyDynamics"
-crate-type = ["dylib"]
+crate-type = ["cdylib"]

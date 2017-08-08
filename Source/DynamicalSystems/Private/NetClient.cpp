@@ -35,7 +35,7 @@ void ANetClient::BeginPlay()
     LastPingTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
     LastBodyTime = LastPingTime;
     if (Client == NULL) {
-        const char* addr = std::string("127.shit.0.0:8080").c_str();
+        const char* addr = std::string("127.0.0.1:8080").c_str();
         Client = rd_netclient_open(addr);
         char uuid[64];
         rd_netclient_uuid(Client, uuid);
@@ -163,19 +163,11 @@ void ANetClient::Tick(float DeltaTime)
                     (*NetRigidBody)->SyncTarget = true;
                     (*NetRigidBody)->TargetLocation = Location;
                     (*NetRigidBody)->TargetLinearVelocity = LinearVelocity;
-//                    AActor* Actor = (*NetRigidBody)->GetOwner();
-////                    if (IsValid(Actor)) {
-//                        Actor->SetActorLocation(Location);
-////                    }
                 }
             }
             rd_netclient_drop_world(WorldPack);
         }
-    }
-    
-//    UE_LOG(LogTemp, Warning, TEXT("ANetClient::NetRigidBodies %i"), NetRigidBodies.Num());
-
-    
+    }    
 }
 
 

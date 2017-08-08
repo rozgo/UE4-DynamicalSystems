@@ -44,7 +44,7 @@ public:
     TArray<FString> MappedClients;
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
-    bool ConsensusReached = FALSE;
+    bool ConsensusReached = false;
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
     FColor ChosenColor;

@@ -11,13 +11,10 @@ public class RustyDynamics : ModuleRules
 
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
-			// Add the import library
-			PublicLibraryPaths.Add(Path.Combine(ModuleDirectory, "x64", "Release"));
-			PublicAdditionalLibraries.Add("ExampleLibrary.lib");
-
-			// Delay-load the DLL, so we can load it from the right place first
-			PublicDelayLoadDLLs.Add("ExampleLibrary.dll");
-		}
+            PublicLibraryPaths.Add(Path.Combine(ModuleDirectory, "target", "Debug", "deps"));
+            PublicAdditionalLibraries.Add("RustyDynamics.dll.lib");
+            PublicDelayLoadDLLs.Add("RustyDynamics.dll");
+        }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
             PublicDelayLoadDLLs.Add(Path.Combine(ModuleDirectory, "target", "Debug", "libRustyDynamics.dylib"));

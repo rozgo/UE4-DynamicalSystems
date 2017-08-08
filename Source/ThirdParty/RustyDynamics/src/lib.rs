@@ -121,10 +121,10 @@ pub fn rd_netclient_open(addr: *const char) -> *mut Client {
 
         let mut core = Core::new().unwrap();
         let handle = core.handle();
-        // let server_addr: SocketAddr = "138.68.41.91:8080".parse().unwrap();
-        let server_addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+        let server_addr: SocketAddr = "138.68.41.91:8080".parse().unwrap();
+        // let server_addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
         // let local_addr: SocketAddr = "192.168.1.126:0".parse().unwrap();
-        let local_addr: SocketAddr = "127.0.0.1:0".parse().unwrap();
+        let local_addr: SocketAddr = "192.168.1.17:0".parse().unwrap();
         let udp_socket = UdpSocket::bind(&local_addr, &handle).unwrap();
         let (tx, rx) = udp_socket.framed(LineCodec).split();
 

@@ -57,7 +57,7 @@ void UNetRigidBody::TickComponent( float DeltaTime, ELevelTick TickType, FActorC
     FRandomStream Rnd(NetID);
     
     DrawDebugSphere(GetWorld(), Actor->GetActorLocation() + FVector(0, 0, 100), 20, 6,
-                    FColor(Rnd.RandRange(0, 255),Rnd.RandRange(0, 255),Rnd.RandRange(128, 255)),
+                    FColor(Rnd.RandRange(0, 255),Rnd.RandRange(0, 255),Rnd.RandRange(0, 255)),
                     false, 0, 200);
     }
     
@@ -65,7 +65,7 @@ void UNetRigidBody::TickComponent( float DeltaTime, ELevelTick TickType, FActorC
     FRandomStream Rnd(NetOwner);
     
     DrawDebugPoint(GetWorld(), Actor->GetActorLocation() + FVector(0, 0, 150), 5,
-                    FColor(Rnd.RandRange(0, 255),Rnd.RandRange(128, 255),Rnd.RandRange(0, 255)),
+                    FColor(Rnd.RandRange(0, 255),Rnd.RandRange(0, 255),Rnd.RandRange(0, 255)),
                     false, 0, 200);
     }
     
