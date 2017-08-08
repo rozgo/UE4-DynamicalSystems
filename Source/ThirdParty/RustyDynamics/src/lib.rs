@@ -69,7 +69,7 @@ pub fn rd_netclient_msg_push(client: *mut Client, bytes: *const u8, count: u32) 
 }
 
 #[no_mangle]
-pub fn rd_netclient_msg_pop(client: *mut Client, msg: *mut u8) -> u32 {
+pub fn rd_netclient_msg_pop(client: *mut Client) -> *mut Vec<u8> {
     unsafe {
         let mut data : Vec<u8> = Vec::new();
         {
@@ -79,11 +79,14 @@ pub fn rd_netclient_msg_pop(client: *mut Client, msg: *mut u8) -> u32 {
                 }
             }
         }
-        for (i, c) in data.iter().enumerate() {
-            *msg.offset(i as isize) = *c as u8;
-        }
-        data.len() as u32
+        let data = Box::new(data);
+        Box::into_raw(data)
     }
+}
+
+#[no_mangle]
+pub fn rd_netclient_msg_drop(msg: *mut Vec<u8>) {
+    unsafe { Box::from_raw(msg) };
 }
 
 #[no_mangle]
@@ -196,10 +199,7 @@ pub fn rd_netclient_push_world(client: *mut Client, world: *const World) {
 pub fn rd_netclient_dec_world(bytes: *const u8, count: u32) -> *const World {
     unsafe {
         let count : usize = count as usize;
-        let mut msg = Vec::with_capacity(count);
-        for i in 0..count {
-            msg.push(*bytes.offset(i as isize));
-        }
+        let msg = std::slice::from_raw_parts(bytes, count);
         let world: World = deserialize(&msg[..]).unwrap();
         let world = Box::new(world);
         Box::into_raw(world)

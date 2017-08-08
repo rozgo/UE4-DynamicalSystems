@@ -97,9 +97,8 @@ void ANetClient::Tick(float DeltaTime)
         }
     }
     
-    static char Msg[512];
-    
     if (CurrentPingTime > LastPingTime + 1) {
+		char Msg[128];
         Msg[0] = 0; // Ping
         strncpy(&Msg[1], TCHAR_TO_UTF8(*Uuid), 36);
         rd_netclient_msg_push(Client, Msg, 37);
@@ -127,12 +126,15 @@ void ANetClient::Tick(float DeltaTime)
                 }
             }
         }
+
+		WorldPack WorldPack;
+		memset(&WorldPack, 0, sizeof(WorldPack));
         
         RustVec WorldRigidBodies;
         WorldRigidBodies.vec_ptr = BodyPacks.Num() > 0 ? (uint64_t)&BodyPacks[0] : 0;
-        WorldRigidBodies.vec_cap = BodyPacks.Num() * 2;
+        WorldRigidBodies.vec_cap = BodyPacks.Num();
         WorldRigidBodies.vec_len = BodyPacks.Num();
-        WorldPack WorldPack;
+       
         WorldPack.rigidbodies = WorldRigidBodies;
 		if (IsValid(Avatar) && !Avatar->IsNetProxy) {
 			TArray<AvatarPack> AvatarPacks;
@@ -147,7 +149,7 @@ void ANetClient::Tick(float DeltaTime)
 			}
 			RustVec AvatarParts;
 			AvatarParts.vec_ptr = (uint64_t)&AvatarPacks[0];
-			AvatarParts.vec_cap = 6;
+			AvatarParts.vec_cap = 3;
 			AvatarParts.vec_len = 3;
 			WorldPack.avatarparts = AvatarParts;
 		}
@@ -156,8 +158,9 @@ void ANetClient::Tick(float DeltaTime)
         LastBodyTime = CurrentBodyTime;
     }
     
-    uint32_t size = rd_netclient_msg_pop(Client, Msg);
-    if (size > 0) {
+    RustVec* RustMsg = rd_netclient_msg_pop(Client);
+	char* Msg = (char*)RustMsg->vec_ptr;
+    if (RustMsg->vec_len > 0) {
         if (Msg[0] == 0) { // Ping
             char UuidStr[37];
             strncpy(UuidStr, &Msg[1], 36);
@@ -167,7 +170,7 @@ void ANetClient::Tick(float DeltaTime)
             RebuildConsensus();
         }
         else if (Msg[0] == 1) { // World
-            WorldPack* WorldPack = rd_netclient_dec_world(&Msg[1], size - 1);
+            WorldPack* WorldPack = rd_netclient_dec_world(&Msg[1], RustMsg->vec_len - 1);
             uint64_t NumOfBodies = WorldPack->rigidbodies.vec_len;
             RigidBodyPack* Bodies = (RigidBodyPack*)WorldPack->rigidbodies.vec_ptr;
             for (auto Idx=0; Idx<NumOfBodies; ++Idx) {
@@ -193,12 +196,12 @@ void ANetClient::Tick(float DeltaTime)
 					Avatar->RotationHandL = FRotator(FQuat(Parts[1].rx, Parts[1].ry, Parts[1].rz, Parts[1].rw));
 					Avatar->LocationHandR = FVector(Parts[2].px, Parts[2].py, Parts[2].pz);
 					Avatar->RotationHandR = FRotator(FQuat(Parts[2].rx, Parts[2].ry, Parts[2].rz, Parts[2].rw));
-
 				}
 			}
             rd_netclient_drop_world(WorldPack);
         }
-    }    
+    }   
+	rd_netclient_msg_drop(RustMsg);
 }
 
 

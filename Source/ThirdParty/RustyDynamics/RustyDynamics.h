@@ -43,7 +43,8 @@ extern "C" {
     void rd_netclient_drop(void* client);
     void rd_netclient_uuid(void* client, char* uuid);
     void rd_netclient_msg_push(void* client, const char* bytes, uint32_t count);
-    uint32_t rd_netclient_msg_pop(void* client, char* uuid);
+    RustVec* rd_netclient_msg_pop(void* client);
+    void rd_netclient_msg_drop(RustVec* msg);
 
     void rd_netclient_push_world(void* client, const WorldPack* world);
     WorldPack* rd_netclient_dec_world(const char* bytes, uint32_t count);
