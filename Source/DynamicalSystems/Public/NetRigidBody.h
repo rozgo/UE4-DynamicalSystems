@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine.h"
+#include "CoreMinimal.h"
 #include "NetClient.h"
 #include "NetRigidBody.generated.h"
 
@@ -34,8 +34,6 @@ public:
     FVector TargetLinearVelocity;
     
 private:
-    
-    unsigned char* Payload[128];
     
 };
 

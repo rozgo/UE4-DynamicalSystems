@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine.h"
+#include "CoreMinimal.h"
 #include "PhysXIncludes.h"
 #include "PhysicsPublic.h"
 #include "Runtime/Engine/Private/PhysicsEngine/PhysXSupport.h"

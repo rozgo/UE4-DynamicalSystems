@@ -164,7 +164,21 @@ pub struct RigidBody {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
+pub struct Avatar {
+    id: u8,
+    px: f32,
+    py: f32,
+    pz: f32,
+    pw: f32,
+    rx: f32,
+    ry: f32,
+    rz: f32,
+    rw: f32,
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct World {
+    avatar: Avatar,
     rigid_bodies: Vec<RigidBody>,
 }
 

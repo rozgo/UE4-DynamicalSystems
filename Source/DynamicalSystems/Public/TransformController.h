@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Engine.h"
+#include "CoreMinimal.h"
 #include "TransformController.generated.h"
 
 UCLASS( ClassGroup=(DynamicalSystems), meta=(BlueprintSpawnableComponent) )

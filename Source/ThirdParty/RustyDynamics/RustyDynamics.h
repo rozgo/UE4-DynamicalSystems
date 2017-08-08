@@ -25,6 +25,12 @@ extern "C" {
         uint64_t vec_len;
     } RustVec;
 
+    typedef struct AvatarPack {
+        uint8_t id;
+        float px, py, pz, pw;
+        float rx, ry, rz, rw;
+    } AvatarPack;
+
     typedef struct RigidBodyPack {
         uint8_t id;
         float px, py, pz, pw;
@@ -34,6 +40,7 @@ extern "C" {
     } RigidBodyPack;
 
     typedef struct WorldPack {
+        AvatarPack avatar;
         RustVec rigidbodies;
     } WorldPack;
 

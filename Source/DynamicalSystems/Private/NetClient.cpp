@@ -1,5 +1,7 @@
 #include "NetClient.h"
+#include "NetAvatar.h"
 #include "NetRigidBody.h"
+#include "RustyDynamics.h"
 #include "DynamicalSystemsPrivatePCH.h"
 
 ANetClient::ANetClient()
@@ -133,6 +135,19 @@ void ANetClient::Tick(float DeltaTime)
             WorldRigidBodies.vec_len = BodyPacks.Num();
             WorldPack WorldPack;
             WorldPack.rigidbodies = WorldRigidBodies;
+			if (IsValid(Avatar)) {
+				WorldPack.avatar.id = Avatar->NetID;
+				FVector Location = Avatar->GetOwner()->GetActorLocation();
+				FQuat Rotation = Avatar->GetOwner()->GetActorRotation().Quaternion();
+				WorldPack.avatar.px = Location.X;
+				WorldPack.avatar.py = Location.Y;
+				WorldPack.avatar.pz = Location.Z;
+				WorldPack.avatar.pw = 1;
+				WorldPack.avatar.rx = Rotation.X;
+				WorldPack.avatar.ry = Rotation.Y;
+				WorldPack.avatar.rz = Rotation.Z;
+				WorldPack.avatar.rw = Rotation.W;
+			}
             rd_netclient_push_world(Client, &WorldPack);
         }
         LastBodyTime = CurrentBodyTime;
@@ -165,6 +180,12 @@ void ANetClient::Tick(float DeltaTime)
                     (*NetRigidBody)->TargetLinearVelocity = LinearVelocity;
                 }
             }
+			if (IsValid(Avatar)) {
+				FVector Location(WorldPack->avatar.px, WorldPack->avatar.py, WorldPack->avatar.pz);
+				FQuat Orientation(WorldPack->avatar.rx, WorldPack->avatar.ry, WorldPack->avatar.rz, WorldPack->avatar.rw);
+				Avatar->GetOwner()->SetActorLocation(Location);
+				Avatar->GetOwner()->SetActorRotation(Orientation);
+			}
             rd_netclient_drop_world(WorldPack);
         }
     }    
