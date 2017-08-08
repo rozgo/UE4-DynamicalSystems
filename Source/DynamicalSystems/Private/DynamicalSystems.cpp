@@ -10,6 +10,10 @@
 
 #define LOCTEXT_NAMESPACE "FDynamicalSystemsModule"
 
+extern "C" void ffi_log(const char* log) {
+	UE_LOG(LogTemp, Warning, TEXT("[Rust] %s"), UTF8_TO_TCHAR(log));
+}
+
 void FDynamicalSystemsModule::StartupModule()
 {
 	// This code will execute after your module is loaded into memory; the exact timing is specified in the .uplugin file per-module
@@ -29,6 +33,7 @@ void FDynamicalSystemsModule::StartupModule()
 
 	if (RustyDynamicsHandle)
 	{
+		rb_log_fn(ffi_log);
 		// Call the test function in the third party library that opens a message box
         
 		//ExampleLibraryFunction();

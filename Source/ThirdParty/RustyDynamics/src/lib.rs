@@ -27,6 +27,20 @@ mod rnd;
 
 pub struct LineCodec;
 
+extern fn null_log(log: *const std::os::raw::c_char) {}
+
+static mut C_LOG: extern fn(log: *const std::os::raw::c_char) = null_log;
+
+#[no_mangle]
+pub extern fn rb_log_fn(log_fn: extern fn(log: *const std::os::raw::c_char)) {
+    unsafe { C_LOG = log_fn; }
+}
+
+fn log(log: std::string::String) {
+    let c_string = std::ffi::CString::new(log).unwrap();
+    unsafe { C_LOG(c_string.as_ptr()) };
+}
+
 impl UdpCodec for LineCodec {
     type In = (SocketAddr, Vec<u8>);
     type Out = (SocketAddr, Vec<u8>);
@@ -60,6 +74,7 @@ pub fn rd_get_pow_2_of_int32(num: u32) -> u32 {
 pub fn rd_netclient_msg_push(client: *mut Client, bytes: *const u8, count: u32) {
     unsafe {
         let count : usize = count as usize;
+        // log(format!("rd_netclient_msg_push count: {}", count));
         let mut msg = Vec::with_capacity(count);
         for i in 0..count {
             msg.push(*bytes.offset(i as isize));
@@ -187,9 +202,11 @@ pub struct World {
 
 #[no_mangle]
 pub fn rd_netclient_push_world(client: *mut Client, world: *const World) {
+    
     unsafe {
         let mut msg = vec![1u8];
         let mut encoded: Vec<u8> = serialize(&(*world), Infinite).unwrap();
+        log(format!("rd_netclient_push_world encoded: {}", encoded.len()));
         msg.append(&mut encoded);
         (*client).sender.send(msg).unwrap();
     }
@@ -199,8 +216,9 @@ pub fn rd_netclient_push_world(client: *mut Client, world: *const World) {
 pub fn rd_netclient_dec_world(bytes: *const u8, count: u32) -> *const World {
     unsafe {
         let count : usize = count as usize;
+        log(format!("rd_netclient_dec_world decode: {}", count));
         let msg = std::slice::from_raw_parts(bytes, count);
-        let world: World = deserialize(&msg[..]).unwrap();
+        let world: World = deserialize(msg).unwrap();
         let world = Box::new(world);
         Box::into_raw(world)
     }

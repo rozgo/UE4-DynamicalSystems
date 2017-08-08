@@ -38,6 +38,8 @@ extern "C" {
         RustVec rigidbodies;
     } WorldPack;
 
+    void rb_log_fn(void (*log_fn)(const char*));
+
     int32_t rd_get_pow_2_of_int32(int32_t num);
     void* rd_netclient_open(const char* addr);
     void rd_netclient_drop(void* client);
