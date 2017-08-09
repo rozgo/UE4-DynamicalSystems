@@ -142,7 +142,7 @@ pub fn rd_netclient_open(addr: *const char) -> *mut Client {
         let server_addr: SocketAddr = "138.68.41.91:8080".parse().unwrap();
         // let server_addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
         // let local_addr: SocketAddr = "192.168.1.126:0".parse().unwrap();
-        let local_addr: SocketAddr = "192.168.1.17:0".parse().unwrap();
+        let local_addr: SocketAddr = "192.168.1.7:0".parse().unwrap();
         let udp_socket = UdpSocket::bind(&local_addr, &handle).unwrap();
         let (tx, rx) = udp_socket.framed(LineCodec).split();
 
@@ -168,6 +168,7 @@ pub fn rd_netclient_open(addr: *const char) -> *mut Client {
     Box::into_raw(client)
 }
 
+#[repr(C)]
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct RigidBody {
     id: u8,
@@ -181,6 +182,7 @@ pub struct RigidBody {
     lw: f32,
 }
 
+#[repr(C)]
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Avatar {
     id: u8,
@@ -194,6 +196,7 @@ pub struct Avatar {
     rw: f32,
 }
 
+#[repr(C)]
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct World {
     avatar_parts: Vec<Avatar>,
@@ -252,6 +255,29 @@ pub fn rd_netclient_test_world(world: *const TestWorld) {
         let decoded: TestWorld = deserialize(&encoded[..]).unwrap();
         assert_eq!(world_cmp, decoded, "decoding world");
         println!("decoded world: {:?}", decoded);
+    }
+}
+
+#[no_mangle]
+pub fn rd_netclient_real_world(world: *const World) {
+    unsafe {
+        let world_cmp = World {
+            avatar_parts: vec![Avatar{id: 10, px: 1.0, py: 1.1, pz: 1.2, pw: 1.3, rx: 2.0, ry: 2.1, rz: 2.2, rw: 2.3}],
+            rigid_bodies: vec![RigidBody{id: 10, px: 1.0, py: 1.1, pz: 1.2, pw: 1.3, lx: 2.0, ly: 2.1, lz: 2.2, lw: 2.3}],
+        };
+
+        println!("mem::size_of::<Avatar> {}", std::mem::size_of::<Avatar>());
+        println!("mem::size_of::<RigidBody> {}", std::mem::size_of::<RigidBody>());
+        println!("mem::size_of::<Vec<Avatar>> {}", std::mem::size_of::<Vec<Avatar>>());
+        println!("mem::size_of::<Vec<RigidBody>> {}", std::mem::size_of::<Vec<RigidBody>>());
+        println!("mem::size_of::<World> {}", std::mem::size_of::<World>());
+        println!("mem::size_of::<usize> {}", std::mem::size_of::<usize>());
+
+        assert_eq!(world_cmp, *world, "struct layout match");
+
+        let encoded: Vec<u8> = serialize(&(*world), Infinite).unwrap();
+        let decoded: World = deserialize(&encoded[..]).unwrap();
+        assert_eq!(world_cmp, decoded, "encoding decoding match");
     }
 }
 

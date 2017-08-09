@@ -14,9 +14,9 @@ extern "C" {
     } TestWorld;
 
     typedef struct RustVec {
-        uint64_t vec_ptr;
-        uint64_t vec_cap;
-        uint64_t vec_len;
+        size_t vec_ptr;
+        size_t vec_cap;
+        size_t vec_len;
     } RustVec;
 
     typedef struct AvatarPack {
@@ -53,4 +53,5 @@ extern "C" {
     void rd_netclient_drop_world(WorldPack* world);
 
     void rd_netclient_test_world(const TestWorld* world);
+    void rd_netclient_real_world(const WorldPack* world);
 }
