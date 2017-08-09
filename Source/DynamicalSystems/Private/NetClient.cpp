@@ -2,6 +2,8 @@
 #include "NetAvatar.h"
 #include "NetRigidBody.h"
 #include "RustyDynamics.h"
+#include "SocketSubsystem.h"
+#include "IPAddress.h"
 #include "DynamicalSystemsPrivatePCH.h"
 
 ANetClient::ANetClient()
@@ -34,6 +36,12 @@ void ANetClient::RebuildConsensus()
 void ANetClient::BeginPlay()
 {
     Super::BeginPlay();
+    
+    bool bCanBindAll;
+    TSharedPtr<class FInternetAddr> localIp = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->GetLocalHostAddr(*GLog, bCanBindAll);
+    Local = localIp->ToString(true);
+    UE_LOG(LogTemp, Warning, TEXT("GetLocalHostAddr %s"), *Local);
+    
     LastPingTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
     LastBodyTime = LastPingTime;
     if (Client == NULL) {

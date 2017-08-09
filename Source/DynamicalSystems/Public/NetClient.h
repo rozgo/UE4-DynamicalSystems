@@ -31,8 +31,8 @@ public:
     
     void RegisterRigidBody(UNetRigidBody* RigidBody);
     
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
-		FString Local = "127.0.0.1:0";
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+    FString Local;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
 	FString Server = "127.0.0.1:8080";
