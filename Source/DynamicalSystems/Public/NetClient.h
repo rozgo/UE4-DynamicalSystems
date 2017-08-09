@@ -30,31 +30,44 @@ public:
     virtual void Tick(float DeltaTime) override;
     
     void RegisterRigidBody(UNetRigidBody* RigidBody);
+	void RegisterAvatar(UNetAvatar* Avatar);
     
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
     FString Local;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
 	FString Server = "127.0.0.1:8080";
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
 	FString Uuid;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
-    TArray<UNetRigidBody*> NetRigidBodies;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
+	int NetIndex = -1;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
+	TArray<UNetRigidBody*> NetRigidBodies;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
+	TArray<UNetAvatar*> NetAvatars;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
     TMap<FString, float> NetClients;
     
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
     TArray<FString> MappedClients;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
 	UNetAvatar* Avatar;
     
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
     bool ConsensusReached = false;
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
     FColor ChosenColor;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
+	int MissingAvatar = -1;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient|Debug")
+	bool MirrorSyncY = false;
 };

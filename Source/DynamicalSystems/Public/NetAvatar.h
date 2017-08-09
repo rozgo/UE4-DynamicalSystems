@@ -13,13 +13,23 @@ public:
 
 	UNetAvatar();
 
+	virtual void BeginPlay() override;
+
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
+
+	float LastUpdateTime;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetAvatar")
 	ANetClient* NetClient = NULL;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetAvatar")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "NetAvatar")
 	int NetID = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetAvatar")
+	FVector Location;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetAvatar")
+	FRotator Rotation;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetAvatar")
 	FVector LocationHMD;
@@ -39,7 +49,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetAvatar")
 	FRotator RotationHandR;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
 	bool IsNetProxy = false;
-
 };

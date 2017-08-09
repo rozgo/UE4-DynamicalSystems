@@ -13,8 +13,14 @@ ANetClient::ANetClient()
 
 void ANetClient::RegisterRigidBody(UNetRigidBody* RigidBody)
 {
-    UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterRigidBody %s"), *RigidBody->GetOwner()->GetName());
-    NetRigidBodies.Add(RigidBody);
+	UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterRigidBody %s"), *RigidBody->GetOwner()->GetName());
+	NetRigidBodies.Add(RigidBody);
+}
+
+void ANetClient::RegisterAvatar(UNetAvatar* Avatar)
+{
+	UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterAvatar %s"), *Avatar->GetOwner()->GetName());
+	NetAvatars.Add(Avatar);
 }
 
 void ANetClient::RebuildConsensus()
@@ -25,6 +31,8 @@ void ANetClient::RebuildConsensus()
     MappedClients.Empty();
     NetClients.GetKeys(MappedClients);
     MappedClients.Sort();
+
+	NetIndex = MappedClients.IndexOfByKey(Uuid);
     
     NetRigidBodies.Sort([](const UNetRigidBody& LHS, const UNetRigidBody& RHS) {
         return LHS.NetID > RHS.NetID; });
@@ -68,30 +76,47 @@ void ANetClient::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
     
-    float CurrentPingTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
-    float CurrentBodyTime = CurrentPingTime;
+    float CurrentTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
+    float CurrentBodyTime = CurrentTime;
     
-    {
-        TArray<int> DeleteList;
-        for (int Idx=0; Idx<NetRigidBodies.Num(); ++Idx) {
-            if (!IsValid(NetRigidBodies[Idx])) {
-                DeleteList.Add(Idx);
-                continue;
-            }
-        }
-        for (int Idx=0; Idx<DeleteList.Num(); ++Idx) {
-            NetRigidBodies.RemoveAt(DeleteList[Idx]);
-        }
-        if (DeleteList.Num() > 0) {
-            RebuildConsensus();
-            return;
-        }
-    }
-    
-    {
+	{
+		TArray<int> DeleteList;
+		for (int Idx=0; Idx<NetRigidBodies.Num(); ++Idx) {
+			if (!IsValid(NetRigidBodies[Idx])) {
+				DeleteList.Add(Idx);
+				continue;
+			}
+		}
+		for (int Idx=0; Idx<DeleteList.Num(); ++Idx) {
+			NetRigidBodies.RemoveAt(DeleteList[Idx]);
+		}
+		if (DeleteList.Num() > 0) {
+			RebuildConsensus();
+			return;
+		}
+	}
+
+	{
+		TArray<int> DeleteList;
+		for (int Idx=0; Idx<NetAvatars.Num(); ++Idx) {
+			if (!IsValid(NetAvatars[Idx])) {
+				DeleteList.Add(Idx);
+				continue;
+			}
+		}
+		for (int Idx=0; Idx<DeleteList.Num(); ++Idx) {
+			NetAvatars.RemoveAt(DeleteList[Idx]);
+		}
+		if (DeleteList.Num() > 0) {
+			RebuildConsensus();
+			return;
+		}
+	}
+
+	{
         TArray<FString> DeleteList;
         for (auto& Elem : NetClients) {
-            if (Elem.Value > 0 && Elem.Value < CurrentPingTime) {
+            if (Elem.Value > 0 && Elem.Value < CurrentTime) {
                 DeleteList.Add(Elem.Key);
             }
         }
@@ -104,12 +129,12 @@ void ANetClient::Tick(float DeltaTime)
         }
     }
     
-    if (CurrentPingTime > LastPingTime + 1) {
+    if (CurrentTime > LastPingTime + 1) {
 		char Msg[128];
         Msg[0] = 0; // Ping
         strncpy(&Msg[1], TCHAR_TO_UTF8(*Uuid), 36);
         rd_netclient_msg_push(Client, Msg, 37);
-        LastPingTime = CurrentPingTime;
+        LastPingTime = CurrentTime;
     }
     
     if (CurrentBodyTime > LastBodyTime + 0.1) {
@@ -174,7 +199,7 @@ void ANetClient::Tick(float DeltaTime)
             strncpy(UuidStr, &Msg[1], 36);
             UuidStr[36] = 0;
             FString Key(UuidStr);
-            NetClients.Add(Key, CurrentPingTime + 5);
+            NetClients.Add(Key, CurrentTime + 5);
             RebuildConsensus();
         }
         else if (Msg[0] == 1) { // World
@@ -182,8 +207,8 @@ void ANetClient::Tick(float DeltaTime)
             uint64_t NumOfBodies = WorldPack->rigidbodies.vec_len;
             RigidBodyPack* Bodies = (RigidBodyPack*)WorldPack->rigidbodies.vec_ptr;
             for (auto Idx=0; Idx<NumOfBodies; ++Idx) {
-                FVector Location(Bodies[Idx].px, -Bodies[Idx].py, Bodies[Idx].pz);
-                FVector LinearVelocity(Bodies[Idx].lx, -Bodies[Idx].ly, Bodies[Idx].lz);
+                FVector Location(Bodies[Idx].px, (MirrorSyncY ? -1 : 1) * Bodies[Idx].py, Bodies[Idx].pz);
+                FVector LinearVelocity(Bodies[Idx].lx, (MirrorSyncY ? -1 : 1) * Bodies[Idx].ly, Bodies[Idx].lz);
                 uint32_t NetID = Bodies[Idx].id;
                 UNetRigidBody** NetRigidBody = NetRigidBodies.FindByPredicate([NetID](const UNetRigidBody* Item) {
                     return IsValid(Item) && Item->NetID == NetID;
@@ -198,17 +223,27 @@ void ANetClient::Tick(float DeltaTime)
 				uint64_t NumOfParts = WorldPack->avatarparts.vec_len;
 				if (NumOfParts >= 3) {
 					AvatarPack* Parts = (AvatarPack*)WorldPack->avatarparts.vec_ptr;
-					Avatar->LocationHMD = FVector(Parts[0].px, Parts[0].py, Parts[0].pz);
-					Avatar->RotationHMD = FRotator(FQuat(Parts[0].rx, Parts[0].ry, Parts[0].rz, Parts[0].rw));
-					Avatar->LocationHandL = FVector(Parts[1].px, Parts[1].py, Parts[1].pz);
-					Avatar->RotationHandL = FRotator(FQuat(Parts[1].rx, Parts[1].ry, Parts[1].rz, Parts[1].rw));
-					Avatar->LocationHandR = FVector(Parts[2].px, Parts[2].py, Parts[2].pz);
-					Avatar->RotationHandR = FRotator(FQuat(Parts[2].rx, Parts[2].ry, Parts[2].rz, Parts[2].rw));
+					uint32_t NetID = Parts[0].id;
+					UNetAvatar** NetAvatar = NetAvatars.FindByPredicate([NetID](const UNetAvatar* Item) {
+						return IsValid(Item) && Item->NetID == NetID;
+					});
+					if (NetAvatar != NULL && *NetAvatar != NULL) {
+						(*NetAvatar)->LastUpdateTime = CurrentTime;
+						(*NetAvatar)->LocationHMD = FVector(Parts[0].px, Parts[0].py, Parts[0].pz);
+						(*NetAvatar)->RotationHMD = FRotator(FQuat(Parts[0].rx, Parts[0].ry, Parts[0].rz, Parts[0].rw));
+						(*NetAvatar)->LocationHandL = FVector(Parts[1].px, Parts[1].py, Parts[1].pz);
+						(*NetAvatar)->RotationHandL = FRotator(FQuat(Parts[1].rx, Parts[1].ry, Parts[1].rz, Parts[1].rw));
+						(*NetAvatar)->LocationHandR = FVector(Parts[2].px, Parts[2].py, Parts[2].pz);
+						(*NetAvatar)->RotationHandR = FRotator(FQuat(Parts[2].rx, Parts[2].ry, Parts[2].rz, Parts[2].rw));
+					}
+					else {
+						MissingAvatar = (int32_t)NetID;
+					}
 				}
 			}
             rd_netclient_drop_world(WorldPack);
         }
-    }   
+    }
 	rd_netclient_msg_drop(RustMsg);
 }
 
