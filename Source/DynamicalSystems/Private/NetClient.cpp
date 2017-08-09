@@ -17,10 +17,10 @@ void ANetClient::RegisterRigidBody(UNetRigidBody* RigidBody)
 	NetRigidBodies.Add(RigidBody);
 }
 
-void ANetClient::RegisterAvatar(UNetAvatar* Avatar)
+void ANetClient::RegisterAvatar(UNetAvatar* NetAvatar)
 {
-	UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterAvatar %s"), *Avatar->GetOwner()->GetName());
-	NetAvatars.Add(Avatar);
+	UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterAvatar %s"), *NetAvatar->GetOwner()->GetName());
+	NetAvatars.Add(NetAvatar);
 }
 
 void ANetClient::RebuildConsensus()
@@ -171,9 +171,9 @@ void ANetClient::Tick(float DeltaTime)
 
 		TArray<AvatarPack> AvatarPacks;
 		if (IsValid(Avatar) && !Avatar->IsNetProxy) {
-			FVector Locations[] = { Avatar->LocationHMD, Avatar->LocationHandL, Avatar->LocationHandR };
-			FQuat Rotations[] = { Avatar->RotationHMD.Quaternion(), Avatar->RotationHandL.Quaternion(), Avatar->RotationHandR.Quaternion() };
-			for (auto I = 0; I < 3; ++I) {
+			FVector Locations[] = { Avatar->Location, Avatar->LocationHMD, Avatar->LocationHandL, Avatar->LocationHandR };
+			FQuat Rotations[] = { Avatar->Rotation.Quaternion(), Avatar->RotationHMD.Quaternion(), Avatar->RotationHandL.Quaternion(), Avatar->RotationHandR.Quaternion() };
+			for (auto I = 0; I < 4; ++I) {
 				AvatarPack Pack = { (uint8_t)Avatar->NetID,
 					Locations[I].X, Locations[I].Y, Locations[I].Z, 1,
 					Rotations[I].X, Rotations[I].Y, Rotations[I].Z, Rotations[I].W,
@@ -182,8 +182,8 @@ void ANetClient::Tick(float DeltaTime)
 			}
 			RustVec AvatarParts;
 			AvatarParts.vec_ptr = (uint64_t)&AvatarPacks[0];
-			AvatarParts.vec_cap = 3;
-			AvatarParts.vec_len = 3;
+			AvatarParts.vec_cap = 4;
+			AvatarParts.vec_len = 4;
 			WorldPack.avatarparts = AvatarParts;
 		}
 
@@ -219,28 +219,28 @@ void ANetClient::Tick(float DeltaTime)
                     (*NetRigidBody)->TargetLinearVelocity = LinearVelocity;
                 }
             }
-			if (IsValid(Avatar) && Avatar->IsNetProxy) {
-				uint64_t NumOfParts = WorldPack->avatarparts.vec_len;
-				if (NumOfParts >= 3) {
-					AvatarPack* Parts = (AvatarPack*)WorldPack->avatarparts.vec_ptr;
-					uint32_t NetID = Parts[0].id;
-					UNetAvatar** NetAvatar = NetAvatars.FindByPredicate([NetID](const UNetAvatar* Item) {
-						return IsValid(Item) && Item->NetID == NetID;
-					});
-					if (NetAvatar != NULL && *NetAvatar != NULL) {
-						(*NetAvatar)->LastUpdateTime = CurrentTime;
-						(*NetAvatar)->LocationHMD = FVector(Parts[0].px, Parts[0].py, Parts[0].pz);
-						(*NetAvatar)->RotationHMD = FRotator(FQuat(Parts[0].rx, Parts[0].ry, Parts[0].rz, Parts[0].rw));
-						(*NetAvatar)->LocationHandL = FVector(Parts[1].px, Parts[1].py, Parts[1].pz);
-						(*NetAvatar)->RotationHandL = FRotator(FQuat(Parts[1].rx, Parts[1].ry, Parts[1].rz, Parts[1].rw));
-						(*NetAvatar)->LocationHandR = FVector(Parts[2].px, Parts[2].py, Parts[2].pz);
-						(*NetAvatar)->RotationHandR = FRotator(FQuat(Parts[2].rx, Parts[2].ry, Parts[2].rz, Parts[2].rw));
-					}
-					else {
-						MissingAvatar = (int32_t)NetID;
-					}
-				}
-			}
+            uint64_t NumOfParts = WorldPack->avatarparts.vec_len;
+            if (NumOfParts >= 4) {
+                AvatarPack* Parts = (AvatarPack*)WorldPack->avatarparts.vec_ptr;
+                uint32_t NetID = Parts[0].id;
+                UNetAvatar** NetAvatar = NetAvatars.FindByPredicate([NetID](const UNetAvatar* Item) {
+                    return IsValid(Item) && Item->NetID == NetID;
+                });
+                if (NetAvatar != NULL && *NetAvatar != NULL) {
+                    (*NetAvatar)->LastUpdateTime = CurrentTime;
+                    (*NetAvatar)->Location = FVector(Parts[0].px, Parts[0].py, Parts[0].pz);
+                    (*NetAvatar)->Rotation = FRotator(FQuat(Parts[0].rx, Parts[0].ry, Parts[0].rz, Parts[0].rw));
+                    (*NetAvatar)->LocationHMD = FVector(Parts[1].px, Parts[1].py, Parts[1].pz);
+                    (*NetAvatar)->RotationHMD = FRotator(FQuat(Parts[1].rx, Parts[1].ry, Parts[1].rz, Parts[1].rw));
+                    (*NetAvatar)->LocationHandL = FVector(Parts[2].px, Parts[2].py, Parts[2].pz);
+                    (*NetAvatar)->RotationHandL = FRotator(FQuat(Parts[2].rx, Parts[2].ry, Parts[2].rz, Parts[2].rw));
+                    (*NetAvatar)->LocationHandR = FVector(Parts[3].px, Parts[3].py, Parts[3].pz);
+                    (*NetAvatar)->RotationHandR = FRotator(FQuat(Parts[3].rx, Parts[3].ry, Parts[3].rz, Parts[3].rw));
+                }
+                else {
+                    MissingAvatar = (int)NetID;
+                }
+            }
             rd_netclient_drop_world(WorldPack);
         }
     }

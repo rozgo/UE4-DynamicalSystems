@@ -29,15 +29,14 @@ void UNetAvatar::TickComponent( float DeltaTime, ELevelTick TickType, FActorComp
 {
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
 
-	NetID = 200 + NetClient->NetIndex;
-
 	float CurrentTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
 
 	if (!IsNetProxy) {
+        NetID = 200 + NetClient->NetIndex;
 		LastUpdateTime = CurrentTime;
 	}
 
-	if (CurrentTime > LastUpdateTime + 2) {
+	if (CurrentTime > LastUpdateTime + 1) {
 		AController* Controller = Cast<AController>(GetOwner());
 		if (IsValid(Controller)) {
 			APawn* Pawn = Controller->GetPawn();
