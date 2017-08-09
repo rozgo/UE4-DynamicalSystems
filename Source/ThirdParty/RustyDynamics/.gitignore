@@ -2,3 +2,7 @@
 Cargo.lock
 .vscode/
 /FFI/ffi
+/FFI/ffi.exe
+/FFI/ffi.obj
+/FFI/RustyDynamics.dll
+/FFI/RustyDynamics.dll.lib

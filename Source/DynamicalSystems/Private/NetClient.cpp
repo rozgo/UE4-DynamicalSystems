@@ -37,8 +37,7 @@ void ANetClient::BeginPlay()
     LastPingTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
     LastBodyTime = LastPingTime;
     if (Client == NULL) {
-        const char* addr = std::string("127.0.0.1:8080").c_str();
-        Client = rd_netclient_open(addr);
+        Client = rd_netclient_open(TCHAR_TO_ANSI(*Local), TCHAR_TO_ANSI(*Server));
         char uuid[64];
         rd_netclient_uuid(Client, uuid);
         Uuid = FString(uuid);
@@ -106,6 +105,10 @@ void ANetClient::Tick(float DeltaTime)
     }
     
     if (CurrentBodyTime > LastBodyTime + 0.1) {
+
+		WorldPack WorldPack;
+		memset(&WorldPack, 0, sizeof(WorldPack));
+
         TArray<RigidBodyPack> BodyPacks;
         for (int Idx=0; Idx<NetRigidBodies.Num(); ++Idx) {
             UNetRigidBody* Body = NetRigidBodies[Idx];
@@ -126,18 +129,15 @@ void ANetClient::Tick(float DeltaTime)
                 }
             }
         }
-
-		WorldPack WorldPack;
-		memset(&WorldPack, 0, sizeof(WorldPack));
         
         RustVec WorldRigidBodies;
         WorldRigidBodies.vec_ptr = BodyPacks.Num() > 0 ? (uint64_t)&BodyPacks[0] : 0;
         WorldRigidBodies.vec_cap = BodyPacks.Num();
         WorldRigidBodies.vec_len = BodyPacks.Num();
-       
         WorldPack.rigidbodies = WorldRigidBodies;
+
+		TArray<AvatarPack> AvatarPacks;
 		if (IsValid(Avatar) && !Avatar->IsNetProxy) {
-			TArray<AvatarPack> AvatarPacks;
 			FVector Locations[] = { Avatar->LocationHMD, Avatar->LocationHandL, Avatar->LocationHandR };
 			FQuat Rotations[] = { Avatar->RotationHMD.Quaternion(), Avatar->RotationHandL.Quaternion(), Avatar->RotationHandR.Quaternion() };
 			for (auto I = 0; I < 3; ++I) {
@@ -153,8 +153,8 @@ void ANetClient::Tick(float DeltaTime)
 			AvatarParts.vec_len = 3;
 			WorldPack.avatarparts = AvatarParts;
 		}
-        rd_netclient_push_world(Client, &WorldPack);
 
+        rd_netclient_push_world(Client, &WorldPack);
         LastBodyTime = CurrentBodyTime;
     }
     

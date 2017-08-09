@@ -31,10 +31,16 @@ public:
     
     void RegisterRigidBody(UNetRigidBody* RigidBody);
     
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
-    FString Uuid;
-    
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
+		FString Local = "127.0.0.1:0";
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
+	FString Server = "127.0.0.1:8080";
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
+	FString Uuid;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")
     TArray<UNetRigidBody*> NetRigidBodies;
     
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetClient")

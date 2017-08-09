@@ -10,8 +10,46 @@
 
 #define LOCTEXT_NAMESPACE "FDynamicalSystemsModule"
 
-extern "C" void ffi_log(const char* log) {
+extern "C" void ffi_log(const char* log)
+{
 	UE_LOG(LogTemp, Warning, TEXT("[Rust] %s"), UTF8_TO_TCHAR(log));
+}
+
+void TestFFI()
+{
+	RigidBodyPack bodies[] = {
+		{10, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+		{11, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+		{12, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+	};
+	AvatarPack parts[] = {
+		{20, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+		{21, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+		{22, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+		{23, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+		{24, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+	};
+
+	UE_LOG(LogTemp, Warning, TEXT("sizeof<AvatarPack> %lu\n"), sizeof(AvatarPack));
+	UE_LOG(LogTemp, Warning, TEXT("sizeof<RigidBodyPack> %lu\n"), sizeof(RigidBodyPack));
+	UE_LOG(LogTemp, Warning, TEXT("sizeof<RustVec> %lu\n"), sizeof(RustVec));
+	UE_LOG(LogTemp, Warning, TEXT("sizeof<WorldPack> %lu\n"), sizeof(WorldPack));
+
+	RustVec bodies_vec;
+	bodies_vec.vec_ptr = (size_t)&bodies[0];
+	bodies_vec.vec_len = 3;
+	bodies_vec.vec_cap = 3;
+
+	RustVec parts_vec;
+	parts_vec.vec_ptr = (size_t)&parts[0];
+	parts_vec.vec_len = 5;
+	parts_vec.vec_cap = 5;
+
+	WorldPack real_world;
+	real_world.avatarparts = parts_vec;
+	real_world.rigidbodies = bodies_vec;
+
+	rd_netclient_real_world(&real_world);
 }
 
 void FDynamicalSystemsModule::StartupModule()
@@ -34,6 +72,7 @@ void FDynamicalSystemsModule::StartupModule()
 	if (RustyDynamicsHandle)
 	{
 		rb_log_fn(ffi_log);
+		TestFFI();
 		// Call the test function in the third party library that opens a message box
         
 		//ExampleLibraryFunction();

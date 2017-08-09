@@ -18,9 +18,15 @@ int main (void)
 
     RigidBodyPack bodies[] = {
         {10, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+        {11, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+        {12, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
     };
     AvatarPack parts[] = {
-        {10, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+        {20, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+        {21, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+        {22, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+        {23, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
+        {24, 1.0, 1.1, 1.2, 1.3, 2.0, 2.1, 2.2, 2.3},
     };
 
     printf("sizeof<AvatarPack> %lu\n", sizeof(AvatarPack));
@@ -30,13 +36,13 @@ int main (void)
 
     RustVec bodies_vec;
     bodies_vec.vec_ptr = (size_t)&bodies[0];
-    bodies_vec.vec_len = 1;
-    bodies_vec.vec_cap = 1;
+    bodies_vec.vec_len = 3;
+    bodies_vec.vec_cap = 3;
     
     RustVec parts_vec;
     parts_vec.vec_ptr = (size_t)&parts[0];
-    parts_vec.vec_len = 1;
-    parts_vec.vec_cap = 1;
+    parts_vec.vec_len = 5;
+    parts_vec.vec_cap = 5;
 
     WorldPack real_world;
     real_world.avatarparts = parts_vec;
