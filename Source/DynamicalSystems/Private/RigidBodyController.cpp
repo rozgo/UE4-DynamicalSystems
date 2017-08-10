@@ -15,11 +15,20 @@ void URigidBodyController::TickComponent( float DeltaTime, ELevelTick TickType, 
 {
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
 
+	if (!Enabled) {
+		return;
+	}
+
+	if (Target) {
+		TargetLocation = Target->GetActorLocation();
+		TargetRotation = Target->GetActorRotation();
+	}
+
     AActor* Actor = GetOwner();
     
-    if (Target && Actor) {
+    if (Actor) {
 
-        FVector LocationSetpoint = Target->GetActorLocation();
+        FVector LocationSetpoint = TargetLocation;
         FVector LocationFeedback = Actor->GetActorLocation();
         
 		LocationError = LocationSetpoint - LocationFeedback;
@@ -29,7 +38,7 @@ void URigidBodyController::TickComponent( float DeltaTime, ELevelTick TickType, 
 		LocationLastError = LocationError;
 		LocationControl = LocationKp * LocationProportional + LocationKi * LocationIntegral + LocationKd * LocationDerivative;
 
-		FQuat RotationSetpoint = Target->GetActorRotation().Quaternion();
+		FQuat RotationSetpoint = TargetRotation.Quaternion();
 		FQuat RotationFeedback = Actor->GetActorRotation().Quaternion();
 		RotationError = FQuat::Error(RotationSetpoint, RotationFeedback);
 		auto RotationProportional = RotationError;

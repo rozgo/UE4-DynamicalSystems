@@ -145,7 +145,7 @@ void ANetClient::Tick(float DeltaTime)
         TArray<RigidBodyPack> BodyPacks;
         for (int Idx=0; Idx<NetRigidBodies.Num(); ++Idx) {
             UNetRigidBody* Body = NetRigidBodies[Idx];
-            if (IsValid(Body) && MappedClients.Num() > Body->NetOwner && MappedClients[Body->NetOwner] == this->Uuid) {
+            if (IsValid(Body) && Body->NetOwner == NetIndex) {
                 AActor* Actor = Body->GetOwner();
                 if (IsValid(Actor)) {
                     FVector LinearVelocity;

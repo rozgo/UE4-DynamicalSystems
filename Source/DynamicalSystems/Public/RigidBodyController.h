@@ -23,36 +23,44 @@ public:
 	virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RigidBodyController")
-		FVector LocationKp = FVector(5);
+	FVector LocationKp = FVector(5);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RigidBodyController")
-		FVector LocationKi = FVector(0);
+	FVector LocationKi = FVector(0);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RigidBodyController")
-		FVector LocationKd = FVector(0);
+	FVector LocationKd = FVector(0);
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RigidBodyController")
-		float RotationKp = 1.0;
+	float RotationKp = 1.0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RigidBodyController")
-		float RotationKi = 0;
+	float RotationKi = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RigidBodyController")
-		float RotationKd = 0;
+	float RotationKd = 0;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="RigidBodyController")
     class AActor* Target = NULL;
     
-	UPROPERTY(BlueprintReadOnly, Category = "RigidBodyController")
-		FVector LocationError = FVector(0);
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="RigidBodyController")
+	FVector TargetLocation;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RigidBodyController")
+	FRotator TargetRotation;
 
 	UPROPERTY(BlueprintReadOnly, Category = "RigidBodyController")
-		FVector LocationControl = FVector(0);
+	FVector LocationError = FVector(0);
 
 	UPROPERTY(BlueprintReadOnly, Category = "RigidBodyController")
-		float RotationError = 0;
+	FVector LocationControl = FVector(0);
 
 	UPROPERTY(BlueprintReadOnly, Category = "RigidBodyController")
-		float RotationControl = 0;
+	float RotationError = 0;
 
+	UPROPERTY(BlueprintReadOnly, Category = "RigidBodyController")
+	float RotationControl = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RigidBodyController")
+	bool Enabled = true;
 };
