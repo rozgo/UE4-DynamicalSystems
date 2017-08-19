@@ -3,9 +3,9 @@
 extern "C" {
 
     typedef struct TestEntity {
-        float x;
-        float y;
-    } TestEntity;
+                         float x;
+                         float y;
+                     } TestEntity;
 
     typedef struct TestWorld {
         uint64_t entities_ptr;

@@ -79,37 +79,21 @@ void ANetClient::Tick(float DeltaTime)
     float CurrentTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
     float CurrentBodyTime = CurrentTime;
     
-	{
-		TArray<int> DeleteList;
-		for (int Idx=0; Idx<NetRigidBodies.Num(); ++Idx) {
-			if (!IsValid(NetRigidBodies[Idx])) {
-				DeleteList.Add(Idx);
-				continue;
-			}
+	for (int Idx=0; Idx<NetRigidBodies.Num();) {
+		if (!IsValid(NetRigidBodies[Idx])) {
+			NetRigidBodies.RemoveAt(Idx);
 		}
-		for (int Idx=0; Idx<DeleteList.Num(); ++Idx) {
-			NetRigidBodies.RemoveAt(DeleteList[Idx]);
-		}
-		if (DeleteList.Num() > 0) {
-			RebuildConsensus();
-			return;
+		else {
+			++Idx;
 		}
 	}
 
-	{
-		TArray<int> DeleteList;
-		for (int Idx=0; Idx<NetAvatars.Num(); ++Idx) {
-			if (!IsValid(NetAvatars[Idx])) {
-				DeleteList.Add(Idx);
-				continue;
-			}
+	for (int Idx=0; Idx<NetAvatars.Num();) {
+		if (!IsValid(NetAvatars[Idx])) {
+			NetAvatars.RemoveAt(Idx);
 		}
-		for (int Idx=0; Idx<DeleteList.Num(); ++Idx) {
-			NetAvatars.RemoveAt(DeleteList[Idx]);
-		}
-		if (DeleteList.Num() > 0) {
-			RebuildConsensus();
-			return;
+		else {
+			++Idx;
 		}
 	}
 
@@ -122,10 +106,6 @@ void ANetClient::Tick(float DeltaTime)
         }
         for (auto& Key : DeleteList) {
             NetClients.Remove(Key);
-        }
-        if (DeleteList.Num() > 0) {
-            RebuildConsensus();
-            return;
         }
     }
     
