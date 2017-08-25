@@ -31,6 +31,7 @@ public class DynamicalSystems : ModuleRules
                 "PhysX",
                 "APEX",
                 "Sockets",
+                "Voice",
                 "RustyDynamics",
 				"Projects"
 				// ... add other public dependencies that you statically link with here ...
