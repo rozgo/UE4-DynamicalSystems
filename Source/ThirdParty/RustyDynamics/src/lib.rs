@@ -7,6 +7,7 @@ extern crate uuid;
 #[macro_use]
 extern crate serde_derive;
 extern crate bincode;
+extern crate mumblebot;
 
 use bincode::{serialize, deserialize, Infinite};
 
@@ -68,7 +69,7 @@ type SharedQueue<T> = std::sync::Arc<std::sync::Mutex<std::collections::VecDeque
 
 pub struct Client {
     uuid: Uuid,
-    sender: SyncSink<Vec<u8>>,
+    sender_pubsub: SyncSink<Vec<u8>>,
     task: Option<std::thread::JoinHandle<()>>,
     queue: SharedQueue<Vec<u8>>,
 }
@@ -86,7 +87,7 @@ pub fn rd_netclient_msg_push(client: *mut Client, bytes: *const u8, count: u32) 
         for i in 0..count {
             msg.push(*bytes.offset(i as isize));
         }
-        (*client).sender.send(msg).unwrap();
+        (*client).sender_pubsub.send(msg).unwrap();
     }
 }
 
@@ -140,7 +141,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
 
     let mut client = Box::new(Client{
         uuid: Uuid::new_v4(),
-        sender: ffi_tx.wait(),
+        sender_pubsub: ffi_tx.wait(),
         task: None,
         queue: Arc::clone(&queue)
     });
@@ -149,6 +150,16 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
 
         let mut core = Core::new().unwrap();
         let handle = core.handle();
+
+        let mumble_server = String::from("165.227.15.250:64738");
+        let (app_logic, mum_tx) = mumblebot::run(&mumble_server, &handle);
+        let app_logic = app_logic.map_err(|_| ());
+
+        let mum_tx0 = mum_tx.clone();
+        std::thread::spawn(|| {
+            mumblebot::say_something(mum_tx0);
+        });
+
         let server_addr: SocketAddr = server_addr.parse().unwrap();
         let local_addr: SocketAddr = local_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
         let udp_socket = UdpSocket::bind(&local_addr, &handle).unwrap();
@@ -168,7 +179,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         })
         .map_err(|_| ());
 
-        core.run(Future::join(msg_tx, msg_rx)).unwrap();
+        core.run(Future::join3(msg_tx, msg_rx, app_logic)).unwrap();
     });
 
     client.task = Some(task);
@@ -218,7 +229,7 @@ pub fn rd_netclient_push_world(client: *mut Client, world: *const World) {
         let mut msg = vec![1u8];
         let mut encoded: Vec<u8> = serialize(&(*world), Infinite).unwrap();
         msg.append(&mut encoded);
-        (*client).sender.send(msg).unwrap();
+        (*client).sender_pubsub.send(msg).unwrap();
     }
 }
 

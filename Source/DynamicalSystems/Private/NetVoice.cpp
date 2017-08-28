@@ -1,4 +1,4 @@
-a#include "NetVoice.h"
+#include "NetVoice.h"
 #include "DynamicalSystemsPrivatePCH.h"
 
 UNetVoice::UNetVoice()
@@ -17,6 +17,8 @@ void UNetVoice::BeginPlay()
 void UNetVoice::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
 {
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
+
+	if (!IsValid(NetClient)) return;
     
     const size_t MaxBytes = 1024;
     
