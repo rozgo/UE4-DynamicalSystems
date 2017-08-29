@@ -1,8 +1,6 @@
 extern crate tokio_core;
-extern crate tokio_timer;
-extern crate pretty_env_logger;
+//extern crate tokio_timer;
 extern crate futures;
-extern crate chrono;
 extern crate uuid;
 #[macro_use]
 extern crate serde_derive;
@@ -70,8 +68,10 @@ type SharedQueue<T> = std::sync::Arc<std::sync::Mutex<std::collections::VecDeque
 pub struct Client {
     uuid: Uuid,
     sender_pubsub: SyncSink<Vec<u8>>,
+    vox: futures::sink::Wait<futures::sync::mpsc::Sender<Vec<u8>>>,
     task: Option<std::thread::JoinHandle<()>>,
-    queue: SharedQueue<Vec<u8>>,
+    msg_queue: SharedQueue<Vec<u8>>,
+    vox_out_queue: SharedQueue<Vec<u8>>,
 }
 
 #[no_mangle]
@@ -96,7 +96,7 @@ pub fn rd_netclient_msg_pop(client: *mut Client) -> *mut Vec<u8> {
     unsafe {
         let mut data : Vec<u8> = Vec::new();
         {
-            if let Ok(mut locked_queue) = (*client).queue.try_lock() {
+            if let Ok(mut locked_queue) = (*client).msg_queue.try_lock() {
                 if let Some(m) = locked_queue.pop_front() {
                     data = m;
                 }
@@ -129,21 +129,37 @@ pub fn rd_netclient_drop(client: *mut Client) {
 }
 
 #[no_mangle]
+pub fn rd_netclient_push_vox(client: *mut Client, bytes: *const u8, count: u32) {
+    unsafe {
+        let msg = std::slice::from_raw_parts(bytes, count as usize);
+        let msg = Vec::from(msg);
+        (*client).vox.send(msg).unwrap();
+        println!("rd_netclient_push_vox");
+    }
+}
+
+#[no_mangle]
 pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) -> *mut Client {
 
     let local_addr = unsafe { std::ffi::CStr::from_ptr(local_addr).to_owned().into_string().unwrap() };
     let server_addr = unsafe { std::ffi::CStr::from_ptr(server_addr).to_owned().into_string().unwrap() };
 
     let (ffi_tx, ffi_rx) = futures::sync::mpsc::unbounded::<Vec<u8>>();
+    let (vox_tx, vox_rx) = futures::sync::mpsc::channel::<Vec<u8>>(0);
 
-    let queue: VecDeque<Vec<u8>> = VecDeque::new();
-    let queue = Arc::new(Mutex::new(queue));
+    let msg_queue: VecDeque<Vec<u8>> = VecDeque::new();
+    let msg_queue = Arc::new(Mutex::new(msg_queue));
+
+    let vox_queue: VecDeque<Vec<u8>> = VecDeque::new();
+    let vox_queue = Arc::new(Mutex::new(vox_queue));
 
     let mut client = Box::new(Client{
         uuid: Uuid::new_v4(),
         sender_pubsub: ffi_tx.wait(),
+        vox: vox_tx.wait(),
         task: None,
-        queue: Arc::clone(&queue)
+        msg_queue: Arc::clone(&msg_queue),
+        vox_out_queue: Arc::clone(&vox_queue),
     });
 
     let task = thread::spawn(move || {
@@ -154,11 +170,12 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         let mumble_server = String::from("165.227.15.250:64738");
         let (app_logic, mum_tx) = mumblebot::run(&mumble_server, &handle);
         let app_logic = app_logic.map_err(|_| ());
+        let mumble_say = mumblebot::say(vox_rx, mum_tx).map_err(|_| ());
 
-        let mum_tx0 = mum_tx.clone();
-        std::thread::spawn(|| {
-            mumblebot::say_something(mum_tx0);
-        });
+//        let mum_tx0 = mum_tx.clone();
+//        std::thread::spawn(|| {
+//            mumblebot::say_something(mum_tx0);
+//        });
 
         let server_addr: SocketAddr = server_addr.parse().unwrap();
         let local_addr: SocketAddr = local_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
@@ -170,7 +187,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
             .map_err(|_| ())
         });
 
-        let msg_rx = rx.fold(queue, |queue, (_, msg)| {
+        let msg_rx = rx.fold(msg_queue, |queue, (_, msg)| {
             {
                 let mut locked_queue = queue.lock().unwrap();
                 locked_queue.push_back(msg);
@@ -179,7 +196,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         })
         .map_err(|_| ());
 
-        core.run(Future::join3(msg_tx, msg_rx, app_logic)).unwrap();
+        core.run(Future::join4(mumble_say,msg_tx, msg_rx, app_logic)).unwrap();
     });
 
     client.task = Some(task);

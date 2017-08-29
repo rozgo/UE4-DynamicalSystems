@@ -23,6 +23,11 @@ void ANetClient::RegisterAvatar(UNetAvatar* NetAvatar)
 	NetAvatars.Add(NetAvatar);
 }
 
+void ANetClient::Say(uint8* Bytes, uint32 Count)
+{
+    rd_netclient_push_vox(Client, (const char*)Bytes, Count);
+}
+
 void ANetClient::RebuildConsensus()
 {
     int Count = NetClients.Num();

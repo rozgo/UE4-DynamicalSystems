@@ -31,6 +31,7 @@ public:
     
     void RegisterRigidBody(UNetRigidBody* RigidBody);
 	void RegisterAvatar(UNetAvatar* Avatar);
+    void Say(uint8* Bytes, uint32 Count);
     
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
     FString Local;

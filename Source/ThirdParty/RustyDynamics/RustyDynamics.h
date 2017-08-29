@@ -48,6 +48,8 @@ extern "C" {
     RustVec* rd_netclient_msg_pop(void* client);
     void rd_netclient_msg_drop(RustVec* msg);
 
+    void rd_netclient_push_vox(void* client, const char* bytes, uint32_t count);
+
     void rd_netclient_push_world(void* client, const WorldPack* world);
     WorldPack* rd_netclient_dec_world(const char* bytes, uint32_t count);
     void rd_netclient_drop_world(WorldPack* world);
