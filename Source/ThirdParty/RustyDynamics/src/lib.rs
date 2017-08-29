@@ -71,7 +71,7 @@ pub struct Client {
     vox: futures::sink::Wait<futures::sync::mpsc::Sender<Vec<u8>>>,
     task: Option<std::thread::JoinHandle<()>>,
     msg_queue: SharedQueue<Vec<u8>>,
-    vox_out_queue: SharedQueue<Vec<u8>>,
+    vox_queue: SharedQueue<Vec<u8>>,
 }
 
 #[no_mangle]
@@ -129,13 +129,33 @@ pub fn rd_netclient_drop(client: *mut Client) {
 }
 
 #[no_mangle]
-pub fn rd_netclient_push_vox(client: *mut Client, bytes: *const u8, count: u32) {
+pub fn rd_netclient_vox_push(client: *mut Client, bytes: *const u8, count: u32) {
     unsafe {
-        let msg = std::slice::from_raw_parts(bytes, count as usize);
-        let msg = Vec::from(msg);
-        (*client).vox.send(msg).unwrap();
-        println!("rd_netclient_push_vox");
+        let vox = std::slice::from_raw_parts(bytes, count as usize);
+        let vox = Vec::from(vox);
+        (*client).vox.send(vox).unwrap();
     }
+}
+
+#[no_mangle]
+pub fn rd_netclient_vox_pop(client: *mut Client) -> *mut Vec<u8> {
+    unsafe {
+        let mut data : Vec<u8> = Vec::new();
+        {
+            if let Ok(mut locked_queue) = (*client).vox_queue.try_lock() {
+                if let Some(m) = locked_queue.pop_front() {
+                    data = m;
+                }
+            }
+        }
+        let data = Box::new(data);
+        Box::into_raw(data)
+    }
+}
+
+#[no_mangle]
+pub fn rd_netclient_vox_drop(vox: *mut Vec<u8>) {
+    unsafe { Box::from_raw(vox) };
 }
 
 #[no_mangle]
@@ -145,7 +165,8 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
     let server_addr = unsafe { std::ffi::CStr::from_ptr(server_addr).to_owned().into_string().unwrap() };
 
     let (ffi_tx, ffi_rx) = futures::sync::mpsc::unbounded::<Vec<u8>>();
-    let (vox_tx, vox_rx) = futures::sync::mpsc::channel::<Vec<u8>>(0);
+    let (vox_out_tx, vox_out_rx) = futures::sync::mpsc::channel::<Vec<u8>>(0);
+    let (vox_in_tx, vox_in_rx) = futures::sync::mpsc::channel::<Vec<u8>>(0);
 
     let msg_queue: VecDeque<Vec<u8>> = VecDeque::new();
     let msg_queue = Arc::new(Mutex::new(msg_queue));
@@ -156,10 +177,10 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
     let mut client = Box::new(Client{
         uuid: Uuid::new_v4(),
         sender_pubsub: ffi_tx.wait(),
-        vox: vox_tx.wait(),
+        vox: vox_out_tx.wait(),
         task: None,
         msg_queue: Arc::clone(&msg_queue),
-        vox_out_queue: Arc::clone(&vox_queue),
+        vox_queue: Arc::clone(&vox_queue),
     });
 
     let task = thread::spawn(move || {
@@ -168,14 +189,19 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         let handle = core.handle();
 
         let mumble_server = String::from("165.227.15.250:64738");
-        let (app_logic, mum_tx) = mumblebot::run(&mumble_server, &handle);
+        let (app_logic, mum_tx) = mumblebot::run(&mumble_server, vox_in_tx, &handle);
         let app_logic = app_logic.map_err(|_| ());
-        let mumble_say = mumblebot::say(vox_rx, mum_tx).map_err(|_| ());
+        let mumble_say = mumblebot::say(vox_out_rx, mum_tx).map_err(|_| ());
 
-//        let mum_tx0 = mum_tx.clone();
-//        std::thread::spawn(|| {
-//            mumblebot::say_something(mum_tx0);
-//        });
+        let mumble_listen = vox_in_rx.fold(vox_queue, |queue, pcm| {
+            {
+                println!("mumble_listen queue");
+                let mut locked_queue = queue.lock().unwrap();
+                locked_queue.push_back(pcm);
+            }
+            ok::<SharedQueue<Vec<u8>>, std::io::Error>(queue)
+            .map_err(|_| ())
+        });
 
         let server_addr: SocketAddr = server_addr.parse().unwrap();
         let local_addr: SocketAddr = local_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
@@ -196,7 +222,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         })
         .map_err(|_| ());
 
-        core.run(Future::join4(mumble_say,msg_tx, msg_rx, app_logic)).unwrap();
+        core.run(Future::join5(mumble_say,mumble_listen, msg_tx, msg_rx, app_logic)).unwrap();
     });
 
     client.task = Some(task);

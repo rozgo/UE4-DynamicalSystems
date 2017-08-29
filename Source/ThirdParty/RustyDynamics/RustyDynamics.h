@@ -44,14 +44,16 @@ extern "C" {
     void* rd_netclient_open(const char* local_addr, const char* server_addr);
     void rd_netclient_drop(void* client);
     void rd_netclient_uuid(void* client, char* uuid);
-    void rd_netclient_msg_push(void* client, const char* bytes, uint32_t count);
+    void rd_netclient_msg_push(void* client, const uint8* bytes, uint32_t count);
     RustVec* rd_netclient_msg_pop(void* client);
     void rd_netclient_msg_drop(RustVec* msg);
 
-    void rd_netclient_push_vox(void* client, const char* bytes, uint32_t count);
+    void rd_netclient_vox_push(void* client, const uint8* bytes, uint32_t count);
+    RustVec* rd_netclient_vox_pop(void* client);
+    void rd_netclient_vox_drop(RustVec* msg);
 
     void rd_netclient_push_world(void* client, const WorldPack* world);
-    WorldPack* rd_netclient_dec_world(const char* bytes, uint32_t count);
+    WorldPack* rd_netclient_dec_world(const uint8* bytes, uint32_t count);
     void rd_netclient_drop_world(WorldPack* world);
 
     void rd_netclient_test_world(const TestWorld* world);

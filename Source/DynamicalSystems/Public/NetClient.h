@@ -5,6 +5,7 @@
 
 class UNetRigidBody;
 class UNetAvatar;
+class UNetVoice;
 
 UCLASS( ClassGroup=(DynamicalSystems), meta=(BlueprintSpawnableComponent) )
 class DYNAMICALSYSTEMS_API ANetClient : public AActor
@@ -31,6 +32,7 @@ public:
     
     void RegisterRigidBody(UNetRigidBody* RigidBody);
 	void RegisterAvatar(UNetAvatar* Avatar);
+    void RegisterVoice(UNetVoice* Voice);
     void Say(uint8* Bytes, uint32 Count);
     
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
@@ -50,6 +52,9 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
 	TArray<UNetAvatar*> NetAvatars;
+    
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
+    TArray<UNetVoice*> NetVoices;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
     TMap<FString, float> NetClients;

@@ -1,5 +1,6 @@
 #include "NetClient.h"
 #include "NetAvatar.h"
+#include "NetVoice.h"
 #include "NetRigidBody.h"
 #include "RustyDynamics.h"
 #include "SocketSubsystem.h"
@@ -17,15 +18,21 @@ void ANetClient::RegisterRigidBody(UNetRigidBody* RigidBody)
 	NetRigidBodies.Add(RigidBody);
 }
 
-void ANetClient::RegisterAvatar(UNetAvatar* NetAvatar)
+void ANetClient::RegisterAvatar(UNetAvatar* _Avatar)
 {
-	UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterAvatar %s"), *NetAvatar->GetOwner()->GetName());
-	NetAvatars.Add(NetAvatar);
+    UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterAvatar %s"), *_Avatar->GetOwner()->GetName());
+    NetAvatars.Add(_Avatar);
+}
+
+void ANetClient::RegisterVoice(UNetVoice* Voice)
+{
+    UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterVoice %s"), *Voice->GetOwner()->GetName());
+    NetVoices.Add(Voice);
 }
 
 void ANetClient::Say(uint8* Bytes, uint32 Count)
 {
-    rd_netclient_push_vox(Client, (const char*)Bytes, Count);
+    rd_netclient_vox_push(Client, Bytes, Count);
 }
 
 void ANetClient::RebuildConsensus()
@@ -93,15 +100,24 @@ void ANetClient::Tick(float DeltaTime)
 		}
 	}
 
-	for (int Idx=0; Idx<NetAvatars.Num();) {
-		if (!IsValid(NetAvatars[Idx])) {
-			NetAvatars.RemoveAt(Idx);
-		}
-		else {
-			++Idx;
-		}
-	}
-
+    for (int Idx=0; Idx<NetAvatars.Num();) {
+        if (!IsValid(NetAvatars[Idx])) {
+            NetAvatars.RemoveAt(Idx);
+        }
+        else {
+            ++Idx;
+        }
+    }
+    
+    for (int Idx=0; Idx<NetVoices.Num();) {
+        if (!IsValid(NetVoices[Idx])) {
+            NetVoices.RemoveAt(Idx);
+        }
+        else {
+            ++Idx;
+        }
+    }
+    
 	{
         TArray<FString> DeleteList;
         for (auto& Elem : NetClients) {
@@ -115,9 +131,9 @@ void ANetClient::Tick(float DeltaTime)
     }
     
     if (CurrentTime > LastPingTime + 1) {
-		char Msg[128];
+		uint8 Msg[128];
         Msg[0] = 0; // Ping
-        strncpy(&Msg[1], TCHAR_TO_UTF8(*Uuid), 36);
+        strncpy(&((char*)Msg)[1], TCHAR_TO_UTF8(*Uuid), 36);
         rd_netclient_msg_push(Client, Msg, 37);
         LastPingTime = CurrentTime;
     }
@@ -177,11 +193,11 @@ void ANetClient::Tick(float DeltaTime)
     }
     
     RustVec* RustMsg = rd_netclient_msg_pop(Client);
-	char* Msg = (char*)RustMsg->vec_ptr;
+	uint8* Msg = (uint8*)RustMsg->vec_ptr;
     if (RustMsg->vec_len > 0) {
         if (Msg[0] == 0) { // Ping
             char UuidStr[37];
-            strncpy(UuidStr, &Msg[1], 36);
+            strncpy(UuidStr, &((char*)Msg)[1], 36);
             UuidStr[36] = 0;
             FString Key(UuidStr);
             NetClients.Add(Key, CurrentTime + 5);
@@ -230,6 +246,17 @@ void ANetClient::Tick(float DeltaTime)
         }
     }
 	rd_netclient_msg_drop(RustMsg);
+    
+    RustVec* RustVox = rd_netclient_vox_pop(Client);
+    uint8* Vox = (uint8*)RustVox->vec_ptr;
+    if (RustVox->vec_len > 0) {
+        UE_LOG(LogTemp, Warning, TEXT("VOX incoming %i"), RustVox->vec_len);
+        for (int Idx=0; Idx<NetVoices.Num(); ++Idx) {
+            UNetVoice* Voice = NetVoices[Idx];
+            Voice->Say(Vox, RustVox->vec_len);
+        }
+    }
+    rd_netclient_vox_drop(RustVox);
 }
 
 
