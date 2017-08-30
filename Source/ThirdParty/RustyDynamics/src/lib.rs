@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex};
 use std::collections::VecDeque;
 
 use futures::{Future, Stream, Sink};
-use futures::future::{ok};
+use futures::future::{ok, err};
 use tokio_core::net::{UdpSocket, UdpCodec};
 use tokio_core::reactor::Core;
 
@@ -59,16 +59,16 @@ impl UdpCodec for LineCodec {
     }
 }
 
-type SyncSink<T> = futures::sink::Wait<futures::sync::mpsc::UnboundedSender<T>>;
 type SharedQueue<T> = std::sync::Arc<std::sync::Mutex<std::collections::VecDeque<T>>>;
 
 pub struct Client {
     uuid: Uuid,
-    sender_pubsub: SyncSink<Vec<u8>>,
+    sender_pubsub: futures::sink::Wait<futures::sync::mpsc::UnboundedSender<Vec<u8>>>,
     vox: futures::sink::Wait<futures::sync::mpsc::Sender<Vec<u8>>>,
     task: Option<std::thread::JoinHandle<()>>,
     msg_queue: SharedQueue<Vec<u8>>,
     vox_queue: SharedQueue<Vec<u8>>,
+    kill: futures::sink::Wait<futures::sync::mpsc::Sender<()>>,
 }
 
 #[no_mangle]
@@ -122,7 +122,11 @@ pub fn rd_netclient_uuid(client: *mut Client, uuid: *mut u8) {
 
 #[no_mangle]
 pub fn rd_netclient_drop(client: *mut Client) {
-    unsafe { Box::from_raw(client) };
+    unsafe {
+        let mut client = Box::from_raw(client);
+        client.kill.send(());
+        log(format!("rd_netclient_drop"));
+    };
 }
 
 #[no_mangle]
@@ -161,6 +165,8 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
     let local_addr = unsafe { std::ffi::CStr::from_ptr(local_addr).to_owned().into_string().unwrap() };
     let server_addr = unsafe { std::ffi::CStr::from_ptr(server_addr).to_owned().into_string().unwrap() };
 
+    let (kill_tx, kill_rx) = futures::sync::mpsc::channel::<()>(0);
+
     let (ffi_tx, ffi_rx) = futures::sync::mpsc::unbounded::<Vec<u8>>();
     let (vox_out_tx, vox_out_rx) = futures::sync::mpsc::channel::<Vec<u8>>(0);
 
@@ -177,6 +183,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         task: None,
         msg_queue: Arc::clone(&msg_queue),
         vox_queue: Arc::clone(&vox_queue),
+        kill: kill_tx.wait(),
     });
 
     let task = thread::spawn(move || {
@@ -197,7 +204,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
             ok::<SharedQueue<Vec<u8>>, std::io::Error>(queue)
             .map_err(|_| ())
         });
-
+        
         let server_addr: SocketAddr = server_addr.parse().unwrap();
         let local_addr: SocketAddr = local_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
         let udp_socket = UdpSocket::bind(&local_addr, &handle).unwrap();
@@ -217,7 +224,20 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         })
         .map_err(|_| ());
 
-        core.run(Future::join5(mumble_say,mumble_listen, msg_tx, msg_rx, app_logic)).unwrap();
+        let kill_switch = kill_rx
+            .fold((),|a,b| {
+                log(format!("kill_switch"));
+                err::<(),()>(())
+            });
+
+        let msg_tasks = Future::join(msg_tx, msg_rx);
+        let mum_tasks = Future::join(mumble_say,mumble_listen);
+
+        core.run(Future::join4( mum_tasks,msg_tasks, app_logic, kill_switch));
+
+
+        log(format!("core end"));
+
     });
 
     client.task = Some(task);
