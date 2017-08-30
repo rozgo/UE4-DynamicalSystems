@@ -29,11 +29,8 @@ mod rnd;
 
 pub struct LineCodec;
 
-extern fn null_log(log: *const std::os::raw::c_char) {
-    unsafe {
-        let slice = CStr::from_ptr(log);
-        println!("{}", slice.to_bytes().len());
-    }
+extern fn null_log(_log: *const std::os::raw::c_char) {
+    ()
 }
 
 static mut C_LOG: extern fn(log: *const c_char) = null_log;
@@ -87,7 +84,7 @@ pub fn rd_netclient_msg_push(client: *mut Client, bytes: *const u8, count: u32) 
         for i in 0..count {
             msg.push(*bytes.offset(i as isize));
         }
-        (*client).sender_pubsub.send(msg).unwrap();
+        (*client).sender_pubsub.send(msg);
     }
 }
 
@@ -133,7 +130,7 @@ pub fn rd_netclient_vox_push(client: *mut Client, bytes: *const u8, count: u32) 
     unsafe {
         let vox = std::slice::from_raw_parts(bytes, count as usize);
         let vox = Vec::from(vox);
-        (*client).vox.send(vox).unwrap();
+        (*client).vox.send(vox);
     }
 }
 
@@ -166,7 +163,6 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
 
     let (ffi_tx, ffi_rx) = futures::sync::mpsc::unbounded::<Vec<u8>>();
     let (vox_out_tx, vox_out_rx) = futures::sync::mpsc::channel::<Vec<u8>>(0);
-    let (vox_in_tx, vox_in_rx) = futures::sync::mpsc::channel::<Vec<u8>>(0);
 
     let msg_queue: VecDeque<Vec<u8>> = VecDeque::new();
     let msg_queue = Arc::new(Mutex::new(msg_queue));
@@ -189,13 +185,12 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         let handle = core.handle();
 
         let mumble_server = String::from("165.227.15.250:64738");
-        let (app_logic, mum_tx) = mumblebot::run(&mumble_server, vox_in_tx, &handle);
+        let (app_logic, mum_tx, vox_in_rx) = mumblebot::run(&mumble_server, &handle);
         let app_logic = app_logic.map_err(|_| ());
         let mumble_say = mumblebot::say(vox_out_rx, mum_tx).map_err(|_| ());
 
         let mumble_listen = vox_in_rx.fold(vox_queue, |queue, pcm| {
             {
-                println!("mumble_listen queue");
                 let mut locked_queue = queue.lock().unwrap();
                 locked_queue.push_back(pcm);
             }
@@ -272,7 +267,7 @@ pub fn rd_netclient_push_world(client: *mut Client, world: *const World) {
         let mut msg = vec![1u8];
         let mut encoded: Vec<u8> = serialize(&(*world), Infinite).unwrap();
         msg.append(&mut encoded);
-        (*client).sender_pubsub.send(msg).unwrap();
+        (*client).sender_pubsub.send(msg);
     }
 }
 

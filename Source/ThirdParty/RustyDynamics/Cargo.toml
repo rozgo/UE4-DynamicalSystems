@@ -17,7 +17,6 @@ serde_derive = "1.0"
 bincode = "0.8"
 mumblebot = { path = "../../../../../../mumble-bot" }
 
-
 [lib]
 name = "RustyDynamics"
 crate-type = ["cdylib"]
