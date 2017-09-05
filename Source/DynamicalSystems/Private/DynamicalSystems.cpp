@@ -72,7 +72,7 @@ void FDynamicalSystemsModule::StartupModule()
 	if (RustyDynamicsHandle)
 	{
 		rb_log_fn(ffi_log);
-		TestFFI();
+		//TestFFI();
 		// Call the test function in the third party library that opens a message box
         
 		//ExampleLibraryFunction();
@@ -84,7 +84,7 @@ void FDynamicalSystemsModule::StartupModule()
 	}
 	else
 	{
-		FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ThirdPartyLibraryError", "Failed to load example third party library"));
+		//FMessageDialog::Open(EAppMsgType::Ok, LOCTEXT("ThirdPartyLibraryError", "Failed to load example third party library"));
 	}
 }
 

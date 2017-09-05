@@ -19,27 +19,21 @@ public:
     UNetVoice();
     
     virtual void BeginPlay() override;
+	virtual void BeginDestroy() override;
     
     virtual void TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction ) override;
     
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetRigidBody")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetVoice")
     ANetClient* NetClient = NULL;
     
     void Say(uint8* Bytes, uint32 Count);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetVoice")
+	USoundWaveProcedural* SoundStream;
     
 private:
     
     TSharedPtr <class IVoiceCapture> VoiceCapture;
-    
-    void FillAudio(USoundWaveProcedural* Wave, const int32 SamplesNeeded);
-    
-    uint32 OptimalFramesPerBuffer;
+
     uint32 SampleRate;
-    std::unique_ptr<USoundWaveProcedural> SoundStream;
-    
-    std::vector<uint8> Buffer;
-    bool bPlayingSound;
-    uint32 PlayCursor;
-    
-    std::atomic_flag StartPlaying;
 };

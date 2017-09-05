@@ -250,7 +250,7 @@ void ANetClient::Tick(float DeltaTime)
     RustVec* RustVox = rd_netclient_vox_pop(Client);
     uint8* Vox = (uint8*)RustVox->vec_ptr;
     if (RustVox->vec_len > 0) {
-        UE_LOG(LogTemp, Warning, TEXT("VOX incoming %i"), RustVox->vec_len);
+        //UE_LOG(LogTemp, Warning, TEXT("VOX incoming %i"), RustVox->vec_len);
         for (int Idx=0; Idx<NetVoices.Num(); ++Idx) {
             UNetVoice* Voice = NetVoices[Idx];
             Voice->Say(Vox, RustVox->vec_len);
