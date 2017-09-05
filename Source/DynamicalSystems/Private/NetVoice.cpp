@@ -24,9 +24,9 @@ void UNetVoice::BeginPlay()
     NetClient->RegisterVoice(this);
     
     VoiceCapture = FVoiceModule::Get().CreateVoiceCapture();
-	//if (VoiceCapture.IsValid()) {
+	if (VoiceCapture.IsValid()) {
 		VoiceCapture->Start();
-	//}
+	}
 
     SampleRate                        = 16000;
 
@@ -60,7 +60,7 @@ void UNetVoice::TickComponent( float DeltaTime, ELevelTick TickType, FActorCompo
 {
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
 
-	if (!IsValid(NetClient)) return;
+	if (!IsValid(NetClient) || !VoiceCapture.IsValid()) return;
     
     uint32 BytesAvailable = 0;
     EVoiceCaptureState::Type CaptureState = VoiceCapture->GetCaptureState(BytesAvailable);
