@@ -24,4 +24,7 @@ public:
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category="Math|Vector")
     static FVector CubicBezier(float Time, FVector P0, FVector P1, FVector P2, FVector P3);
+
+	UFUNCTION(BlueprintCallable, BlueprintPure, meta = (Exponent = "1.0"), Category = "Math|Float")
+	static TArray<float> ExpandArray(const TArray<float>& Samples, const float Exponent);
 };

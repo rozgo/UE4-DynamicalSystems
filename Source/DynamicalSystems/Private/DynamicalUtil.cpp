@@ -60,4 +60,50 @@ FVector UDynamicalUtil::CubicBezier(float Time, FVector P0, FVector P1, FVector 
 		P3 * FMath::Pow(Time, 3.f);
 }
 
+TArray<float> UDynamicalUtil::ExpandArray(const TArray<float>& Samples, const float Exponent)
+{
+	TArray<float> tempArray;					// Create tempArray.
+	tempArray.Init(0.0f, Samples.Num());		// Populate it with as many zeroes as the incoming float array.
+	float originalSum = 0.0f;					// Create originalSum.
+	float processedSum = 0.0f;					// Create processedSum.
+	float difference = 0.0f;					// Create difference.
+	float energyDifferenceRatio = 0.0f;			// Create energyDifferenceRatio.
+
+	for (auto I = 0; I < Samples.Num(); ++I) {	// Calculate the sum of all of the original samples in the input array.
+		originalSum += Samples[I];
+	}
+
+	for (auto I = 0; I < Samples.Num(); ++I) {	// Set the indices of tempArray to ((InputArray[i] + 1) - (Mean(InputArray)) ^ Exponent).
+		tempArray[I] = pow(((Samples[I] + 1.0f) - MeanOfFloatArray(Samples)), Exponent);
+	}
+
+	for (auto I = 0; I < Samples.Num(); ++I) {	// Calculate the sum of all samples processed above from the original vector.
+		processedSum += tempArray[I];
+	}
+
+	difference = processedSum - originalSum;	// Calculate the difference between the processed sum and the original sum and set it to the difference variable.
+
+	for (auto I = 0; I < Samples.Num(); ++I) {	// Recalculate the samples in tempArray as tempArray[i] - (difference / tempArray.Length).
+		tempArray[I] = tempArray[I] - (difference / tempArray.Num());
+		// Unipolarize the data set - normalize negative values to 0.
+		if (tempArray[I] < 0.0f) { tempArray[I] = 0.0f; }
+	}
+
+	processedSum = 0.0f;
+	for (auto I = 0; I < Samples.Num(); ++I) {	// Reset the value of processedSum to the new sum of the unipolarized array.
+		processedSum += tempArray[I];
+	}
+	// Divide-by-zero suppression.
+	if (FMath::IsNearlyZero(originalSum)) { originalSum = FLT_EPSILON; }
+
+	energyDifferenceRatio = processedSum / originalSum;
+	if (FMath::IsNearlyZero(energyDifferenceRatio)) { energyDifferenceRatio = 1.0f; }
+
+	for (auto I = 0; I < Samples.Num(); ++I) {
+		tempArray[I] = tempArray[I] / energyDifferenceRatio;
+	}
+
+	return tempArray;
+}
+
 
