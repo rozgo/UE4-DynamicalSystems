@@ -7,8 +7,6 @@
 #include "IPAddress.h"
 #include "DynamicalSystemsPrivatePCH.h"
 
-float unpackFloat(const void *buf, int *i);
-int packFloat(void *buf, float x);
 
 ANetClient::ANetClient()
 {
@@ -251,10 +249,9 @@ void ANetClient::Tick(float DeltaTime)
 		else if (Msg[0] == 10) {
 			char MsgSystem = Msg[1];
 			char MsgId = Msg[2];
-			int count = 0;
-			float MsgValue = unpackFloat(Msg + 3, &count);
-			UE_LOG(LogTemp, Warning, TEXT("MsgSystem: %c MsgId: %c MsgValue: %f"), Msg[1], Msg[2], MsgValue);
-			OnSystemFloatMsg.Broadcast(MsgSystem, MsgId, MsgValue);
+			float* MsgValue = (float*)(Msg + 3);
+			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], *MsgValue);
+			OnSystemFloatMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
 		}
     }
 	rd_netclient_msg_drop(RustMsg);
@@ -269,8 +266,6 @@ void ANetClient::Tick(float DeltaTime)
         }
     }
     rd_netclient_vox_drop(RustVox);
-
-	
 }
 
 void ANetClient::SendSystemFloat(int32 System, int32 Id, float Value)
@@ -279,51 +274,14 @@ void ANetClient::SendSystemFloat(int32 System, int32 Id, float Value)
 	Msg[0] = 10;
 	Msg[1] = (uint8)System;
 	Msg[2] = (uint8)Id;
-	packFloat(Msg + 3, Value);
-	rd_netclient_msg_push(Client, Msg, 8);
+
+	uint8* fbytes = (uint8*)(&Value);
+	Msg[3] = fbytes[0];
+	Msg[4] = fbytes[1];
+	Msg[5] = fbytes[2];
+	Msg[6] = fbytes[3];
+
+	UE_LOG(LogTemp, Warning, TEXT("Msg OUT MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], Value);
+	rd_netclient_msg_push(Client, Msg, 7);
 }
 
-// unpack method for retrieving data in network byte,
-//   big endian, order (MSB first)
-// increments index i by the number of bytes unpacked
-// usage:
-//   int i = 0;
-//   float x = unpackFloat(&buffer[i], &i);
-//   float y = unpackFloat(&buffer[i], &i);
-//   float z = unpackFloat(&buffer[i], &i);
-float unpackFloat(const void *buf, int *i) {
-	const unsigned char *b = (const unsigned char *)buf;
-	uint32_t temp = 0;
-	*i += 4;
-	temp = ((b[0] << 24) |
-		(b[1] << 16) |
-		(b[2] <<  8) |
-		b[3]);
-	return *((float *) temp);
-}
-
-// pack method for storing data in network,
-//   big endian, byte order (MSB first)
-// returns number of bytes packed
-// usage:
-//   float x, y, z;
-//   int i = 0;
-//   i += packFloat(&buffer[i], x);
-//   i += packFloat(&buffer[i], y);
-//   i += packFloat(&buffer[i], z);
-int packFloat(void *buf, float x) {
-	unsigned char *b = (unsigned char *)buf;
-	unsigned char *p = (unsigned char *) &x;
-#if defined (_M_IX86) || (defined (CPU_FAMILY) && (CPU_FAMILY == I80X86))
-	b[0] = p[3];
-	b[1] = p[2];
-	b[2] = p[1];
-	b[3] = p[0];
-#else
-	b[0] = p[0];
-	b[1] = p[1];
-	b[2] = p[2];
-	b[3] = p[3];
-#endif
-	return 4;
-}
