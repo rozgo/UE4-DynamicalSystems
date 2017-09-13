@@ -33,12 +33,12 @@ extern "C" {
         // float ax, ay, az;
     } RigidBodyPack;
 
-    typedef struct WorldPack {
-        RustVec avatarparts;
-        RustVec rigidbodies;
-    } WorldPack;
+	typedef struct WorldPack {
+		RustVec avatarparts;
+		RustVec rigidbodies;
+	} WorldPack;
 
-    void rb_log_fn(void (*log_fn)(const char*));
+	void rb_log_fn(void (*log_fn)(const char*));
 
     int32_t rd_get_pow_2_of_int32(int32_t num);
     void* rd_netclient_open(const char* local_addr, const char* server_addr);
