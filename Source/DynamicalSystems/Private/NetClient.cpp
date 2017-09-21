@@ -7,6 +7,7 @@
 #include "IPAddress.h"
 #include "DynamicalSystemsPrivatePCH.h"
 
+
 ANetClient::ANetClient()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -195,6 +196,7 @@ void ANetClient::Tick(float DeltaTime)
     RustVec* RustMsg = rd_netclient_msg_pop(Client);
 	uint8* Msg = (uint8*)RustMsg->vec_ptr;
     if (RustMsg->vec_len > 0) {
+
         if (Msg[0] == 0) { // Ping
             char UuidStr[37];
             strncpy(UuidStr, &((char*)Msg)[1], 36);
@@ -244,6 +246,13 @@ void ANetClient::Tick(float DeltaTime)
             }
             rd_netclient_drop_world(WorldPack);
         }
+		else if (Msg[0] == 10) {
+			char MsgSystem = Msg[1];
+			char MsgId = Msg[2];
+			float* MsgValue = (float*)(Msg + 3);
+			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], *MsgValue);
+			OnSystemFloatMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
+		}
     }
 	rd_netclient_msg_drop(RustMsg);
     
@@ -259,4 +268,20 @@ void ANetClient::Tick(float DeltaTime)
     rd_netclient_vox_drop(RustVox);
 }
 
+void ANetClient::SendSystemFloat(int32 System, int32 Id, float Value)
+{
+	uint8 Msg[7];
+	Msg[0] = 10;
+	Msg[1] = (uint8)System;
+	Msg[2] = (uint8)Id;
+
+	uint8* fbytes = (uint8*)(&Value);
+	Msg[3] = fbytes[0];
+	Msg[4] = fbytes[1];
+	Msg[5] = fbytes[2];
+	Msg[6] = fbytes[3];
+
+	UE_LOG(LogTemp, Warning, TEXT("Msg OUT MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], Value);
+	rd_netclient_msg_push(Client, Msg, 7);
+}
 
