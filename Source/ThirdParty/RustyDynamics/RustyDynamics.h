@@ -38,6 +38,10 @@ extern "C" {
         RustVec rigidbodies;
     } WorldPack;
 
+    typedef struct SystemPack {
+        RustVec system;
+    } SystemPack;
+
     void rb_log_fn(void (*log_fn)(const char*));
 
     int32_t rd_get_pow_2_of_int32(int32_t num);
