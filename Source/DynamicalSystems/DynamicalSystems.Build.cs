@@ -33,7 +33,12 @@ public class DynamicalSystems : ModuleRules
                 "Sockets",
                 "Voice",
                 "RustyDynamics",
-				"Projects"
+				"Projects",
+				"InputCore",
+				"AnimGraph", 
+				"BlueprintGraph", 
+				"AnimGraphRuntime",
+				"AnimationCore"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
