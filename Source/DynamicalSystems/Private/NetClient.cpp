@@ -247,8 +247,8 @@ void ANetClient::Tick(float DeltaTime)
             rd_netclient_drop_world(WorldPack);
         }
 		else if (Msg[0] == 10) {
-			char MsgSystem = Msg[1];
-			char MsgId = Msg[2];
+			uint8 MsgSystem = Msg[1];
+			uint8 MsgId = Msg[2];
 			float* MsgValue = (float*)(Msg + 3);
 			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], *MsgValue);
 			OnSystemFloatMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
@@ -275,6 +275,7 @@ void ANetClient::SendSystemFloat(int32 System, int32 Id, float Value)
 	Msg[1] = (uint8)System;
 	Msg[2] = (uint8)Id;
 
+	//TODO: byte order
 	uint8* fbytes = (uint8*)(&Value);
 	Msg[3] = fbytes[0];
 	Msg[4] = fbytes[1];
