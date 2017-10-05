@@ -54,10 +54,13 @@ void FAnimNode_CopyBoneClamped::EvaluateSkeletalControl_AnyThread(FComponentSpac
     FVector SourceToTarget = TargetTranslation - SourceTranslation;
     SourceToTarget = SourceToTarget.GetClampedToSize(MinDist, MaxDist);
     TargetTranslation = SourceTranslation + SourceToTarget;
-    
     TargetTranslation.Z = fmax(Floor, TargetTranslation.Z);
-    
     CurrentBoneTM.SetTranslation(TargetTranslation);
+
+
+	//SourceTranslation.Z = fmax(Floor, SourceTranslation.Z);
+	//CurrentBoneTM.SetTranslation(SourceTranslation);
+
     
 //    // Copy individual components
 //    if (bCopyTranslation)
