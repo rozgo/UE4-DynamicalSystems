@@ -1,3 +1,5 @@
+#ifdef UE_EDITOR
+
 #include "AnimGraphNode_CopyBoneClamped.h"
 #include "DynamicalSystemsPrivatePCH.h"
 
@@ -47,3 +49,4 @@ FText UAnimGraphNode_CopyBoneClamped::GetNodeTitle(ENodeTitleType::Type TitleTyp
 
 #undef LOCTEXT_NAMESPACE
 
+#endif // UE_EDITOR
