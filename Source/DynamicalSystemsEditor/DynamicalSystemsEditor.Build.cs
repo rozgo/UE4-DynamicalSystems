@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class DynamicalSystems : ModuleRules
+public class DynamicalSystemsEditor : ModuleRules
 {
-	public DynamicalSystems(ReadOnlyTargetRules Target) : base(Target)
+	public DynamicalSystemsEditor(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
@@ -35,8 +35,11 @@ public class DynamicalSystems : ModuleRules
                 "RustyDynamics",
 				"Projects",
 				"InputCore",
+				"AnimGraph", 
+				"BlueprintGraph", 
 				"AnimGraphRuntime",
-				"AnimationCore"
+				"AnimationCore",
+                "DynamicalSystems"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
