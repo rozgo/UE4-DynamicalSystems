@@ -253,7 +253,14 @@ void ANetClient::Tick(float DeltaTime)
 			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], *MsgValue);
 			OnSystemFloatMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
 		}
-    }
+		else if (Msg[0] == 11) {
+			uint8 MsgSystem = Msg[1];
+			uint8 MsgId = Msg[2];
+			int32* MsgValue = (int32*)(Msg + 3);
+			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %i"), Msg[1], Msg[2], *MsgValue);
+			OnSystemIntMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
+		}
+	}
 	rd_netclient_msg_drop(RustMsg);
     
     RustVec* RustVox = rd_netclient_vox_pop(Client);
@@ -282,7 +289,25 @@ void ANetClient::SendSystemFloat(int32 System, int32 Id, float Value)
 	Msg[5] = fbytes[2];
 	Msg[6] = fbytes[3];
 
-	UE_LOG(LogTemp, Warning, TEXT("Msg OUT MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], Value);
+	UE_LOG(LogTemp, Warning, TEXT("Msg OUT System Float: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], Value);
+	rd_netclient_msg_push(Client, Msg, 7);
+}
+
+void ANetClient::SendSystemInt(int32 System, int32 Id, int32 Value)
+{
+	uint8 Msg[7];
+	Msg[0] = 11;
+	Msg[1] = (uint8)System;
+	Msg[2] = (uint8)Id;
+
+	//TODO: byte order
+	uint8* ibytes = (uint8*)(&Value);
+	Msg[3] = ibytes[0];
+	Msg[4] = ibytes[1];
+	Msg[5] = ibytes[2];
+	Msg[6] = ibytes[3];
+
+	UE_LOG(LogTemp, Warning, TEXT("Msg OUT System Int: %u MsgId: %u MsgValue: %i"), Msg[1], Msg[2], Value);
 	rd_netclient_msg_push(Client, Msg, 7);
 }
 
