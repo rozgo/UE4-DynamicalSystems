@@ -18,6 +18,11 @@
       "Name": "DynamicalSystems",
       "Type": "Runtime",
       "LoadingPhase": "Default"
+    },
+	{
+      "Name": "DynamicalSystemsEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
     }
   ]
 }
