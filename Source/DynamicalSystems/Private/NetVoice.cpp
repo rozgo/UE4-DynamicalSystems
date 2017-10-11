@@ -62,6 +62,9 @@ void UNetVoice::TickComponent( float DeltaTime, ELevelTick TickType, FActorCompo
 
 	if (!IsValid(NetClient) || !VoiceCapture.IsValid()) return;
     
+	Activity = 0;
+	uint32 ActivityCount = 0;
+
     uint32 BytesAvailable = 0;
     EVoiceCaptureState::Type CaptureState = VoiceCapture->GetCaptureState(BytesAvailable);
     while (CaptureState == EVoiceCaptureState::Ok && BytesAvailable > 0)
@@ -71,7 +74,13 @@ void UNetVoice::TickComponent( float DeltaTime, ELevelTick TickType, FActorCompo
 //        UE_LOG(LogTemp, Warning, TEXT("NetVoice BytesAvailable: %i BytesRead: %i"), BytesAvailable, BytesRead);
         NetClient->Say(Buf, BytesRead);
         CaptureState = VoiceCapture->GetCaptureState(BytesAvailable);
+		for (uint32 I = 0; I < BytesRead; ++I) {
+			Activity += Buf[I];
+		}
+		ActivityCount += BytesRead;
     }
+
+	Activity = Activity / ActivityCount;
 }
 
 

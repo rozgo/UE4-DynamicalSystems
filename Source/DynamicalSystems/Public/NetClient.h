@@ -10,6 +10,8 @@ class UNetVoice;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FSystemFloatMsgDecl, int32, System, int32, Id, float, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FSystemIntMsgDecl, int32, System, int32, Id, int32, Value);
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FVoiceActivityMsgDecl, int32, NetId, float, Value);
+
 UCLASS( ClassGroup=(DynamicalSystems), meta=(BlueprintSpawnableComponent) )
 class DYNAMICALSYSTEMS_API ANetClient : public AActor
 {
@@ -49,6 +51,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FSystemIntMsgDecl OnSystemIntMsg;
+
+	UPROPERTY(BlueprintAssignable)
+	FVoiceActivityMsgDecl OnVoiceActivityMsg;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
     FString Local;

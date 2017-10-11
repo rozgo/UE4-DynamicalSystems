@@ -9,6 +9,8 @@
 #include "Runtime/Online/Voice/Public/VoiceModule.h"
 #include "NetVoice.generated.h"
 
+
+
 UCLASS( ClassGroup=(DynamicalSystems), meta=(BlueprintSpawnableComponent) )
 class DYNAMICALSYSTEMS_API UNetVoice : public UActorComponent
 {
@@ -30,6 +32,8 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "NetVoice")
 	USoundWaveProcedural* SoundStream;
+
+	uint32 Activity = 0;
     
 private:
     
