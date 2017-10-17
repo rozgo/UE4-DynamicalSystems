@@ -80,7 +80,9 @@ void UNetVoice::TickComponent( float DeltaTime, ELevelTick TickType, FActorCompo
 		ActivityCount += BytesRead;
     }
 
-	Activity = Activity / ActivityCount;
+	if (ActivityCount > 0) {
+		Activity = Activity / ActivityCount;
+	}
 }
 
 
