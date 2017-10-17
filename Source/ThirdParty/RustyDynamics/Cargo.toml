@@ -16,6 +16,7 @@ serde = "1.0"
 serde_derive = "1.0"
 bincode = "0.8"
 mumblebot = { path = "../../../../../../mumble-bot" }
+# mumblebot = { git = "https://github.com/rozgo/mumble-bot", branch = "master" }
 
 [lib]
 name = "RustyDynamics"

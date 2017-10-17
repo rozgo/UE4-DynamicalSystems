@@ -168,7 +168,9 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
     let (kill_tx, kill_rx) = futures::sync::mpsc::channel::<()>(0);
 
     let (ffi_tx, ffi_rx) = futures::sync::mpsc::unbounded::<Vec<u8>>();
-    let (vox_out_tx, vox_out_rx) = futures::sync::mpsc::channel::<Vec<u8>>(0);
+
+    let (vox_out_tx, vox_out_rx) = futures::sync::mpsc::channel::<Vec<u8>>(1000);
+    let (vox_inp_tx, vox_inp_rx) = futures::sync::mpsc::channel::<Vec<u8>>(1000);
 
     let msg_queue: VecDeque<Vec<u8>> = VecDeque::new();
     let msg_queue = Arc::new(Mutex::new(msg_queue));
@@ -188,53 +190,60 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
 
     let task = thread::spawn(move || {
 
+        let local_addr: SocketAddr = local_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
+
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let mumble_server = String::from("165.227.15.250:64738");
-        let (app_logic, mum_tx, vox_in_rx) = mumblebot::run(&mumble_server, &handle);
-        let app_logic = app_logic.map_err(|_| ());
-        let mumble_say = mumblebot::say(vox_out_rx, mum_tx).map_err(|_| ());
+        let crypt_state = mumblebot::udp_crypt();
 
-        let mumble_listen = vox_in_rx.fold(vox_queue, |queue, pcm| {
+        let mumble_server = String::from("138.68.48.30:64738").parse().unwrap();
+
+        let (app_logic, _tcp_tx, udp_tx) = mumblebot::run(local_addr, mumble_server, vox_inp_tx.clone(), Arc::clone(&crypt_state), &handle);
+
+        let mumble_say = mumblebot::say(vox_out_rx, udp_tx.clone(), Arc::clone(&crypt_state));
+
+        let mumble_listen = vox_inp_rx.fold(vox_queue, |queue, pcm| {
             {
                 let mut locked_queue = queue.lock().unwrap();
                 locked_queue.push_back(pcm);
             }
             ok::<SharedQueue<Vec<u8>>, std::io::Error>(queue)
             .map_err(|_| ())
-        });
+        })
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "vox_inp_task"));
         
         let server_addr: SocketAddr = server_addr.parse().unwrap();
-        let local_addr: SocketAddr = local_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
+        
         let udp_socket = UdpSocket::bind(&local_addr, &handle).unwrap();
         let (tx, rx) = udp_socket.framed(LineCodec).split();
 
-        let msg_tx = ffi_rx.fold(tx, |tx, msg| {
+        let msg_out_task = ffi_rx.fold(tx, |tx, msg| {
             tx.send((server_addr, msg))
             .map_err(|_| ())
-        });
+        })
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "msg_out_task"));
 
-        let msg_rx = rx.fold(msg_queue, |queue, (_, msg)| {
+        let msg_inp_task = rx.fold(msg_queue, |queue, (_, msg)| {
             {
                 let mut locked_queue = queue.lock().unwrap();
                 locked_queue.push_back(msg);
             }
             ok::<SharedQueue<Vec<u8>>, std::io::Error>(queue)
         })
-        .map_err(|_| ());
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "msg_inp_task"));
 
         let kill_switch = kill_rx
-            .fold((),|a,b| {
-                log(format!("kill_switch"));
-                err::<(),()>(())
-            });
+        .fold((), |_a, _b| {
+            log(format!("kill_switch"));
+            err::<(),()>(())
+        })
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "kill_switch"));
 
-        let msg_tasks = Future::join(msg_tx, msg_rx);
-        let mum_tasks = Future::join(mumble_say,mumble_listen);
+        let msg_tasks = Future::join(msg_inp_task, msg_out_task);
+        let mum_tasks = Future::join(mumble_say, mumble_listen);
 
-        core.run(Future::join4( mum_tasks,msg_tasks, app_logic, kill_switch));
-
+        core.run(Future::join4(mum_tasks, msg_tasks, app_logic, kill_switch)).unwrap();
 
         log(format!("core end"));
 
