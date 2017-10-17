@@ -138,6 +138,16 @@ void ANetClient::Tick(float DeltaTime)
         rd_netclient_msg_push(Client, Msg, 37);
         LastPingTime = CurrentTime;
     }
+
+	for (int Idx=0; Idx<NetVoices.Num(); ++Idx) {
+		UNetVoice* NetVoice = NetVoices[Idx];
+		if (NetVoice->Activity > 0) {
+			//		UE_LOG(LogTemp, Warning, TEXT("NetVoice Activity: %u"), Activity);
+			OnVoiceActivityMsg.Broadcast(NetVoice->NetClient->NetIndex, (float)NetVoice->Activity/255.f);
+		}
+	}
+
+
     
     if (CurrentBodyTime > LastBodyTime + 0.1) {
 
@@ -246,14 +256,14 @@ void ANetClient::Tick(float DeltaTime)
             }
             rd_netclient_drop_world(WorldPack);
         }
-		else if (Msg[0] == 10) {
+		else if (Msg[0] == 10) { // System Float
 			uint8 MsgSystem = Msg[1];
 			uint8 MsgId = Msg[2];
 			float* MsgValue = (float*)(Msg + 3);
 			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], *MsgValue);
 			OnSystemFloatMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
 		}
-		else if (Msg[0] == 11) {
+		else if (Msg[0] == 11) { // System Int
 			uint8 MsgSystem = Msg[1];
 			uint8 MsgId = Msg[2];
 			int32* MsgValue = (int32*)(Msg + 3);
