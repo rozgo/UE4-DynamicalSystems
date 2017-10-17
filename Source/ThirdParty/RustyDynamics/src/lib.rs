@@ -20,7 +20,6 @@ use futures::future::{ok, err};
 use tokio_core::net::{UdpSocket, UdpCodec};
 use tokio_core::reactor::Core;
 
-use std::ffi::CStr;
 use std::os::raw::c_char;
 
 use uuid::Uuid;
@@ -163,7 +162,12 @@ pub fn rd_netclient_vox_drop(vox: *mut Vec<u8>) {
 pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) -> *mut Client {
 
     let local_addr = unsafe { std::ffi::CStr::from_ptr(local_addr).to_owned().into_string().unwrap() };
+    let local_addr: SocketAddr = local_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
+
     let server_addr = unsafe { std::ffi::CStr::from_ptr(server_addr).to_owned().into_string().unwrap() };
+    let server_addr: SocketAddr = server_addr.parse().unwrap();
+    
+    let mumble_server = String::from("138.68.48.30:64738").parse().unwrap();
 
     let (kill_tx, kill_rx) = futures::sync::mpsc::channel::<()>(0);
 
@@ -190,14 +194,10 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
 
     let task = thread::spawn(move || {
 
-        let local_addr: SocketAddr = local_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
-
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
         let crypt_state = mumblebot::udp_crypt();
-
-        let mumble_server = String::from("138.68.48.30:64738").parse().unwrap();
 
         let (app_logic, _tcp_tx, udp_tx) = mumblebot::run(local_addr, mumble_server, vox_inp_tx.clone(), Arc::clone(&crypt_state), &handle);
 
@@ -212,8 +212,6 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
             .map_err(|_| ())
         })
         .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "vox_inp_task"));
-        
-        let server_addr: SocketAddr = server_addr.parse().unwrap();
         
         let udp_socket = UdpSocket::bind(&local_addr, &handle).unwrap();
         let (tx, rx) = udp_socket.framed(LineCodec).split();
@@ -243,7 +241,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         let msg_tasks = Future::join(msg_inp_task, msg_out_task);
         let mum_tasks = Future::join(mumble_say, mumble_listen);
 
-        core.run(Future::join4(mum_tasks, msg_tasks, app_logic, kill_switch)).unwrap();
+        core.run(Future::join3(mum_tasks, msg_tasks, app_logic)).unwrap();
 
         log(format!("core end"));
 

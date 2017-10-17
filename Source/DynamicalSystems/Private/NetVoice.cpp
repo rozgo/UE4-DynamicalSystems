@@ -49,6 +49,7 @@ void UNetVoice::BeginDestroy()
 void UNetVoice::Say(uint8* Bytes, uint32 Count)
 {
 	//if (!IsValid(SoundStream)) {
+	//UE_LOG(LogTemp, Warning, TEXT("UNetVoice::Say Bytes: %i"), Count);
 		SoundStream->QueueAudio(Bytes, Count);
 	//}
 }
