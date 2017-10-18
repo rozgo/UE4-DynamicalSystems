@@ -270,6 +270,14 @@ void ANetClient::Tick(float DeltaTime)
 			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %i"), Msg[1], Msg[2], *MsgValue);
 			OnSystemIntMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
 		}
+		else if (Msg[0] == 12) { // System String
+			uint8 MsgSystem = Msg[1];
+			uint8 MsgId = Msg[2];
+			const char* MsgValuePtr = (const char*)(Msg + 3);
+			FString MsgValue(MsgValuePtr);
+			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %s"), Msg[1], Msg[2], *MsgValue);
+			OnSystemStringMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
+		}
 	}
 	rd_netclient_msg_drop(RustMsg);
     
@@ -319,5 +327,23 @@ void ANetClient::SendSystemInt(int32 System, int32 Id, int32 Value)
 
 	UE_LOG(LogTemp, Warning, TEXT("Msg OUT System Int: %u MsgId: %u MsgValue: %i"), Msg[1], Msg[2], Value);
 	rd_netclient_msg_push(Client, Msg, 7);
+}
+
+void ANetClient::SendSystemString(int32 System, int32 Id, FString Value)
+{
+	uint8 Msg[7 + 1000];
+	Msg[0] = 12;
+	Msg[1] = (uint8)System;
+	Msg[2] = (uint8)Id;
+
+	const char* String = TCHAR_TO_ANSI(*Value);
+	size_t StringLen = strnlen(String, 512);
+
+	uint8* ibytes = NULL;
+	strncpy_s((char*)Msg + 3, StringLen, String, 512);
+	Msg[7 + StringLen + 1] = 0;
+
+	UE_LOG(LogTemp, Warning, TEXT("Msg OUT System Int: %u MsgId: %u MsgValue: %s"), Msg[1], Msg[2], *Value);
+	rd_netclient_msg_push(Client, Msg, 7 + StringLen + 1);
 }
 

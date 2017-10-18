@@ -9,6 +9,7 @@ class UNetVoice;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FSystemFloatMsgDecl, int32, System, int32, Id, float, Value);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FSystemIntMsgDecl, int32, System, int32, Id, int32, Value);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FSystemStringMsgDecl, int32, System, int32, Id, FString, Value);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FVoiceActivityMsgDecl, int32, NetId, float, Value);
 
@@ -46,11 +47,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category="NetClient")
 	void SendSystemInt(int32 System, int32 Id, int32 Value);
 
+	UFUNCTION(BlueprintCallable, Category="NetClient")
+	void SendSystemString(int32 System, int32 Id, FString Value);
+
 	UPROPERTY(BlueprintAssignable)
 	FSystemFloatMsgDecl OnSystemFloatMsg;
 
 	UPROPERTY(BlueprintAssignable)
 	FSystemIntMsgDecl OnSystemIntMsg;
+
+	UPROPERTY(BlueprintAssignable)
+	FSystemStringMsgDecl OnSystemStringMsg;
 
 	UPROPERTY(BlueprintAssignable)
 	FVoiceActivityMsgDecl OnVoiceActivityMsg;
