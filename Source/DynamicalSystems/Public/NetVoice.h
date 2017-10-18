@@ -40,4 +40,5 @@ private:
     TSharedPtr <class IVoiceCapture> VoiceCapture;
 
     uint32 SampleRate;
+	uint32 SayActivity = 0;
 };

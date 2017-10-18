@@ -197,11 +197,9 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let crypt_state = mumblebot::udp_crypt();
+        let (app_logic, _tcp_tx, udp_tx) = mumblebot::run(local_addr, mumble_server, vox_inp_tx.clone(), &handle);
 
-        let (app_logic, _tcp_tx, udp_tx) = mumblebot::run(local_addr, mumble_server, vox_inp_tx.clone(), Arc::clone(&crypt_state), &handle);
-
-        let mumble_say = mumblebot::say(vox_out_rx, udp_tx.clone(), Arc::clone(&crypt_state));
+        let mumble_say = mumblebot::say(vox_out_rx, udp_tx.clone());
 
         let mumble_listen = vox_inp_rx.fold(vox_queue, |queue, pcm| {
             {
@@ -241,7 +239,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         let msg_tasks = Future::join(msg_inp_task, msg_out_task);
         let mum_tasks = Future::join(mumble_say, mumble_listen);
 
-        core.run(Future::join3(mum_tasks, msg_tasks, app_logic)).unwrap();
+        core.run(Future::join4(mum_tasks, msg_tasks, app_logic, kill_switch)).unwrap();
 
         log(format!("core end"));
 

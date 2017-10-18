@@ -50,8 +50,14 @@ void UNetVoice::Say(uint8* Bytes, uint32 Count)
 {
 	//if (!IsValid(SoundStream)) {
 	//UE_LOG(LogTemp, Warning, TEXT("UNetVoice::Say Bytes: %i"), Count);
-		SoundStream->QueueAudio(Bytes, Count);
-	//}
+	SoundStream->QueueAudio(Bytes, Count);
+	for (uint32 I = 0; I < Count; ++I) {
+		SayActivity += Bytes[I];
+	}
+	if (Count > 0) {
+		SayActivity /= Count;
+	}
+	//UE_LOG(LogTemp, Warning, TEXT("UNetVoice::Say %i"), GFrameCounter);
 }
 
 const size_t MaxBytes = 1024 * 100;
@@ -59,6 +65,7 @@ uint8 Buf[MaxBytes];
 
 void UNetVoice::TickComponent( float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction )
 {
+	//UE_LOG(LogTemp, Warning, TEXT("UNetVoice::TickComponent %i"), GFrameCounter);
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
 
 	if (!IsValid(NetClient) || !VoiceCapture.IsValid()) return;
@@ -84,6 +91,9 @@ void UNetVoice::TickComponent( float DeltaTime, ELevelTick TickType, FActorCompo
 	if (ActivityCount > 0) {
 		Activity = Activity / ActivityCount;
 	}
+
+	Activity = (Activity + SayActivity) / 2;
+	SayActivity = 0;
 }
 
 
