@@ -1,5 +1,4 @@
 extern crate tokio_core;
-//extern crate tokio_timer;
 extern crate futures;
 extern crate uuid;
 #[macro_use]
@@ -159,15 +158,16 @@ pub fn rd_netclient_vox_drop(vox: *mut Vec<u8>) {
 }
 
 #[no_mangle]
-pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) -> *mut Client {
+pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char, mumble_addr: *const c_char) -> *mut Client {
 
     let local_addr = unsafe { std::ffi::CStr::from_ptr(local_addr).to_owned().into_string().unwrap() };
     let local_addr: SocketAddr = local_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
 
     let server_addr = unsafe { std::ffi::CStr::from_ptr(server_addr).to_owned().into_string().unwrap() };
-    let server_addr: SocketAddr = server_addr.parse().unwrap();
+    let server_addr: SocketAddr = server_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
     
-    let mumble_server = String::from("138.68.48.30:64738").parse().unwrap();
+    let mumble_addr = unsafe { std::ffi::CStr::from_ptr(mumble_addr).to_owned().into_string().unwrap() };
+    let mumble_addr: SocketAddr = mumble_addr.parse().unwrap_or(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 0));
 
     let (kill_tx, kill_rx) = futures::sync::mpsc::channel::<()>(0);
 
@@ -197,7 +197,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char) 
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (app_logic, _tcp_tx, udp_tx) = mumblebot::run(local_addr, mumble_server, vox_inp_tx.clone(), &handle);
+        let (app_logic, _tcp_tx, udp_tx) = mumblebot::run(local_addr, mumble_addr, vox_inp_tx.clone(), &handle);
 
         let mumble_say = mumblebot::say(vox_out_rx, udp_tx.clone());
 

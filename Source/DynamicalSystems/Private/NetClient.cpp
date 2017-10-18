@@ -66,7 +66,7 @@ void ANetClient::BeginPlay()
     LastPingTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
     LastBodyTime = LastPingTime;
     if (Client == NULL) {
-        Client = rd_netclient_open(TCHAR_TO_ANSI(*Local), TCHAR_TO_ANSI(*Server));
+        Client = rd_netclient_open(TCHAR_TO_ANSI(*Local), TCHAR_TO_ANSI(*Server), TCHAR_TO_ANSI(*MumbleServer));
         char uuid[64];
         rd_netclient_uuid(Client, uuid);
         Uuid = FString(uuid);
