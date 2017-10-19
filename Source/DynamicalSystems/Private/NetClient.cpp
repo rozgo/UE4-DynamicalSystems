@@ -146,8 +146,6 @@ void ANetClient::Tick(float DeltaTime)
 			OnVoiceActivityMsg.Broadcast(NetVoice->NetClient->NetIndex, (float)NetVoice->Activity/255.f);
 		}
 	}
-
-
     
     if (CurrentBodyTime > LastBodyTime + 0.1) {
 
@@ -331,21 +329,18 @@ void ANetClient::SendSystemInt(int32 System, int32 Id, int32 Value)
 
 void ANetClient::SendSystemString(int32 System, int32 Id, FString Value)
 {
-	uint8 Msg[7 + 550];
+	uint8 Msg[2000];
+	memset(Msg, 0, 2000);
+
 	Msg[0] = 12;
 	Msg[1] = (uint8)System;
 	Msg[2] = (uint8)Id;
 
 	const char* String = TCHAR_TO_ANSI(*Value);
-	uint32 StringLen = (uint32)strnlen(String, 512);
-
+	uint32 StringLen = (uint32)strnlen(String, 1000);
 	strncpy((char*)(Msg + 3), String, StringLen);
-	
-	uint32 ZeroIdx = 7 + StringLen + 1;
-
-	Msg[ZeroIdx] = 0;
 
 	UE_LOG(LogTemp, Warning, TEXT("Msg OUT System Int: %u MsgId: %u MsgValue: %s"), Msg[1], Msg[2], *Value);
-	rd_netclient_msg_push(Client, Msg, ZeroIdx + 1);
+	rd_netclient_msg_push(Client, Msg, StringLen + 10);
 }
 
