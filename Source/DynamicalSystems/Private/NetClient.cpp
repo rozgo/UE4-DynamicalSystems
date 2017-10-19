@@ -331,19 +331,21 @@ void ANetClient::SendSystemInt(int32 System, int32 Id, int32 Value)
 
 void ANetClient::SendSystemString(int32 System, int32 Id, FString Value)
 {
-	uint8 Msg[7 + 1000];
+	uint8 Msg[7 + 550];
 	Msg[0] = 12;
 	Msg[1] = (uint8)System;
 	Msg[2] = (uint8)Id;
 
 	const char* String = TCHAR_TO_ANSI(*Value);
-	size_t StringLen = strnlen(String, 512);
+	uint32 StringLen = (uint32)strnlen(String, 512);
 
-	uint8* ibytes = NULL;
-	strncpy_s((char*)Msg + 3, StringLen, String, 512);
-	Msg[7 + StringLen + 1] = 0;
+	strncpy((char*)(Msg + 3), String, StringLen);
+	
+	uint32 ZeroIdx = 7 + StringLen + 1;
+
+	Msg[ZeroIdx] = 0;
 
 	UE_LOG(LogTemp, Warning, TEXT("Msg OUT System Int: %u MsgId: %u MsgValue: %s"), Msg[1], Msg[2], *Value);
-	rd_netclient_msg_push(Client, Msg, 7 + StringLen + 1);
+	rd_netclient_msg_push(Client, Msg, ZeroIdx + 1);
 }
 
