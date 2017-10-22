@@ -7,6 +7,7 @@
 #include "IPAddress.h"
 #include "DynamicalSystemsPrivatePCH.h"
 
+DEFINE_LOG_CATEGORY(RustyNet);
 
 ANetClient::ANetClient()
 {
@@ -15,19 +16,19 @@ ANetClient::ANetClient()
 
 void ANetClient::RegisterRigidBody(UNetRigidBody* RigidBody)
 {
-	UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterRigidBody %s"), *RigidBody->GetOwner()->GetName());
+	UE_LOG(RustyNet, Warning, TEXT("ANetClient::RegisterRigidBody %s"), *RigidBody->GetOwner()->GetName());
 	NetRigidBodies.Add(RigidBody);
 }
 
 void ANetClient::RegisterAvatar(UNetAvatar* _Avatar)
 {
-    UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterAvatar %s"), *_Avatar->GetOwner()->GetName());
+    UE_LOG(RustyNet, Warning, TEXT("ANetClient::RegisterAvatar %s"), *_Avatar->GetOwner()->GetName());
     NetAvatars.Add(_Avatar);
 }
 
 void ANetClient::RegisterVoice(UNetVoice* Voice)
 {
-    UE_LOG(LogTemp, Warning, TEXT("ANetClient::RegisterVoice %s"), *Voice->GetOwner()->GetName());
+    UE_LOG(RustyNet, Warning, TEXT("ANetClient::RegisterVoice %s"), *Voice->GetOwner()->GetName());
     NetVoices.Add(Voice);
 }
 
@@ -61,17 +62,15 @@ void ANetClient::BeginPlay()
     bool bCanBindAll;
     TSharedPtr<class FInternetAddr> localIp = ISocketSubsystem::Get(PLATFORM_SOCKETSUBSYSTEM)->GetLocalHostAddr(*GLog, bCanBindAll);
     Local = localIp->ToString(true);
-    UE_LOG(LogTemp, Warning, TEXT("GetLocalHostAddr %s"), *Local);
+    UE_LOG(RustyNet, Warning, TEXT("GetLocalHostAddr %s"), *Local);
     
     LastPingTime = UGameplayStatics::GetRealTimeSeconds(GetWorld());
     LastBodyTime = LastPingTime;
     if (Client == NULL) {
         Client = rd_netclient_open(TCHAR_TO_ANSI(*Local), TCHAR_TO_ANSI(*Server), TCHAR_TO_ANSI(*MumbleServer));
-        char uuid[64];
-        rd_netclient_uuid(Client, uuid);
-        Uuid = FString(uuid);
+		Uuid = FMath::RandRange(10000, 99999);
         NetClients.Add(Uuid, -1);
-        UE_LOG(LogTemp, Warning, TEXT("NetClient OPEN %s"), *Uuid);
+        UE_LOG(RustyNet, Warning, TEXT("NetClient BeginPlay %i"), Uuid);
     }
 }
 
@@ -79,9 +78,9 @@ void ANetClient::BeginDestroy()
 {
     Super::BeginDestroy();
     if (Client != NULL) {
+		UE_LOG(RustyNet, Warning, TEXT("NetClient BeginDestroy %i"), Uuid);
         rd_netclient_drop(Client);
         Client = NULL;
-        UE_LOG(LogTemp, Warning, TEXT("NetClient DROP %s"), *Uuid);
     }
 }
 
@@ -120,7 +119,7 @@ void ANetClient::Tick(float DeltaTime)
     }
     
 	{
-        TArray<FString> DeleteList;
+        TArray<int32> DeleteList;
         for (auto& Elem : NetClients) {
             if (Elem.Value > 0 && Elem.Value < CurrentTime) {
                 DeleteList.Add(Elem.Key);
@@ -132,18 +131,23 @@ void ANetClient::Tick(float DeltaTime)
     }
     
     if (CurrentTime > LastPingTime + 1) {
-		uint8 Msg[128];
+		uint8 Msg[5];
         Msg[0] = 0; // Ping
-        strncpy(&((char*)Msg)[1], TCHAR_TO_UTF8(*Uuid), 36);
-        rd_netclient_msg_push(Client, Msg, 37);
+		//TODO: byte order
+		uint8* bytes = (uint8*)(&Uuid);
+		Msg[1] = bytes[0];
+		Msg[2] = bytes[1];
+		Msg[3] = bytes[2];
+		Msg[4] = bytes[3];
+        rd_netclient_msg_push(Client, Msg, 5);
         LastPingTime = CurrentTime;
     }
 
 	for (int Idx=0; Idx<NetVoices.Num(); ++Idx) {
 		UNetVoice* NetVoice = NetVoices[Idx];
 		if (NetVoice->Activity > 0) {
-			//		UE_LOG(LogTemp, Warning, TEXT("NetVoice Activity: %u"), Activity);
-			OnVoiceActivityMsg.Broadcast(NetVoice->NetClient->NetIndex, (float)NetVoice->Activity/255.f);
+			//UE_LOG(RustyNet, Warning, TEXT("NetVoice Activity: %u"), Activity);
+			OnVoiceActivityMsg.Broadcast(NetVoice->NetClient->NetIndex, (float)NetVoice->Activity/16384.f);
 		}
 	}
     
@@ -206,11 +210,8 @@ void ANetClient::Tick(float DeltaTime)
     if (RustMsg->vec_len > 0) {
 
         if (Msg[0] == 0) { // Ping
-            char UuidStr[37];
-            strncpy(UuidStr, &((char*)Msg)[1], 36);
-            UuidStr[36] = 0;
-            FString Key(UuidStr);
-            NetClients.Add(Key, CurrentTime + 5);
+            Uuid = *((int32*)(Msg + 1));
+            NetClients.Add(Uuid, CurrentTime + 5);
             RebuildConsensus();
         }
         else if (Msg[0] == 1) { // World
@@ -258,14 +259,14 @@ void ANetClient::Tick(float DeltaTime)
 			uint8 MsgSystem = Msg[1];
 			uint8 MsgId = Msg[2];
 			float* MsgValue = (float*)(Msg + 3);
-			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], *MsgValue);
+			UE_LOG(RustyNet, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], *MsgValue);
 			OnSystemFloatMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
 		}
 		else if (Msg[0] == 11) { // System Int
 			uint8 MsgSystem = Msg[1];
 			uint8 MsgId = Msg[2];
 			int32* MsgValue = (int32*)(Msg + 3);
-			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %i"), Msg[1], Msg[2], *MsgValue);
+			UE_LOG(RustyNet, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %i"), Msg[1], Msg[2], *MsgValue);
 			OnSystemIntMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
 		}
 		else if (Msg[0] == 12) { // System String
@@ -273,7 +274,7 @@ void ANetClient::Tick(float DeltaTime)
 			uint8 MsgId = Msg[2];
 			const char* MsgValuePtr = (const char*)(Msg + 3);
 			FString MsgValue(MsgValuePtr);
-			UE_LOG(LogTemp, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %s"), Msg[1], Msg[2], *MsgValue);
+			UE_LOG(RustyNet, Warning, TEXT("Msg IN MsgSystem: %u MsgId: %u MsgValue: %s"), Msg[1], Msg[2], *MsgValue);
 			OnSystemStringMsg.Broadcast(MsgSystem, MsgId, *MsgValue);
 		}
 	}
@@ -282,7 +283,7 @@ void ANetClient::Tick(float DeltaTime)
     RustVec* RustVox = rd_netclient_vox_pop(Client);
     uint8* Vox = (uint8*)RustVox->vec_ptr;
     if (RustVox->vec_len > 0) {
-        //UE_LOG(LogTemp, Warning, TEXT("VOX incoming %i"), RustVox->vec_len);
+        UE_LOG(RustyNet, Warning, TEXT("VOX incoming %i"), RustVox->vec_len);
         for (int Idx=0; Idx<NetVoices.Num(); ++Idx) {
             UNetVoice* Voice = NetVoices[Idx];
             Voice->Say(Vox, RustVox->vec_len);
@@ -305,7 +306,7 @@ void ANetClient::SendSystemFloat(int32 System, int32 Id, float Value)
 	Msg[5] = fbytes[2];
 	Msg[6] = fbytes[3];
 
-	UE_LOG(LogTemp, Warning, TEXT("Msg OUT System Float: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], Value);
+	UE_LOG(RustyNet, Warning, TEXT("Msg OUT System Float: %u MsgId: %u MsgValue: %f"), Msg[1], Msg[2], Value);
 	rd_netclient_msg_push(Client, Msg, 7);
 }
 
@@ -323,7 +324,7 @@ void ANetClient::SendSystemInt(int32 System, int32 Id, int32 Value)
 	Msg[5] = ibytes[2];
 	Msg[6] = ibytes[3];
 
-	UE_LOG(LogTemp, Warning, TEXT("Msg OUT System Int: %u MsgId: %u MsgValue: %i"), Msg[1], Msg[2], Value);
+	UE_LOG(RustyNet, Warning, TEXT("Msg OUT System Int: %u MsgId: %u MsgValue: %i"), Msg[1], Msg[2], Value);
 	rd_netclient_msg_push(Client, Msg, 7);
 }
 
@@ -340,7 +341,7 @@ void ANetClient::SendSystemString(int32 System, int32 Id, FString Value)
 	uint32 StringLen = (uint32)strnlen(String, 1000);
 	strncpy((char*)(Msg + 3), String, StringLen);
 
-	UE_LOG(LogTemp, Warning, TEXT("Msg OUT System Int: %u MsgId: %u MsgValue: %s"), Msg[1], Msg[2], *Value);
+	UE_LOG(RustyNet, Warning, TEXT("Msg OUT System Int: %u MsgId: %u MsgValue: %s"), Msg[1], Msg[2], *Value);
 	rd_netclient_msg_push(Client, Msg, StringLen + 10);
 }
 

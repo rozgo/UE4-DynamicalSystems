@@ -21,8 +21,6 @@ use tokio_core::reactor::Core;
 
 use std::os::raw::c_char;
 
-use uuid::Uuid;
-
 mod rnd;
 
 pub struct LineCodec;
@@ -60,7 +58,6 @@ impl UdpCodec for LineCodec {
 type SharedQueue<T> = std::sync::Arc<std::sync::Mutex<std::collections::VecDeque<T>>>;
 
 pub struct Client {
-    uuid: Uuid,
     sender_pubsub: futures::sink::Wait<futures::sync::mpsc::UnboundedSender<Vec<u8>>>,
     vox: futures::sink::Wait<futures::sync::mpsc::Sender<Vec<u8>>>,
     task: Option<std::thread::JoinHandle<()>>,
@@ -77,12 +74,11 @@ pub fn rd_get_pow_2_of_int32(num: u32) -> u32 {
 #[no_mangle]
 pub fn rd_netclient_msg_push(client: *mut Client, bytes: *const u8, count: u32) {
     unsafe {
-        let count : usize = count as usize;
-        let mut msg = Vec::with_capacity(count);
-        for i in 0..count {
-            msg.push(*bytes.offset(i as isize));
+        let msg = std::slice::from_raw_parts(bytes, count as usize);
+        let msg = Vec::from(msg);
+        if let Err(err) = (*client).sender_pubsub.send(msg) {
+            log(format!("rd_netclient_msg_push: {}", err));
         }
-        (*client).sender_pubsub.send(msg);
     }
 }
 
@@ -108,22 +104,11 @@ pub fn rd_netclient_msg_drop(msg: *mut Vec<u8>) {
 }
 
 #[no_mangle]
-pub fn rd_netclient_uuid(client: *mut Client, uuid: *mut u8) {
-    unsafe {
-        let u = format!("{}\npedro", (*client).uuid);
-        for (i, c) in u.chars().enumerate().take(36) {
-            *uuid.offset(i as isize) = c as u8;
-        }
-        *uuid.offset(36) = 0;
-    }
-}
-
-#[no_mangle]
 pub fn rd_netclient_drop(client: *mut Client) {
     unsafe {
         let mut client = Box::from_raw(client);
-        client.kill.send(());
-        log(format!("rd_netclient_drop"));
+        let res = client.kill.send(());
+        log(format!("rd_netclient_drop: {:?}", res));
     };
 }
 
@@ -132,7 +117,9 @@ pub fn rd_netclient_vox_push(client: *mut Client, bytes: *const u8, count: u32) 
     unsafe {
         let vox = std::slice::from_raw_parts(bytes, count as usize);
         let vox = Vec::from(vox);
-        (*client).vox.send(vox);
+        if let Err(err) = (*client).vox.send(vox) {
+            log(format!("rd_netclient_vox_push: {}", err));
+        }
     }
 }
 
@@ -183,7 +170,6 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char, 
     let vox_queue = Arc::new(Mutex::new(vox_queue));
 
     let mut client = Box::new(Client{
-        uuid: Uuid::new_v4(),
         sender_pubsub: ffi_tx.wait(),
         vox: vox_out_tx.wait(),
         task: None,
@@ -197,7 +183,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char, 
         let mut core = Core::new().unwrap();
         let handle = core.handle();
 
-        let (app_logic, _tcp_tx, udp_tx) = mumblebot::run(local_addr, mumble_addr, vox_inp_tx.clone(), &handle);
+        let (mumble_loop, _tcp_tx, udp_tx) = mumblebot::run(local_addr, mumble_addr, vox_inp_tx.clone(), &handle);
 
         let mumble_say = mumblebot::say(vox_out_rx, udp_tx.clone());
 
@@ -231,7 +217,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char, 
 
         let kill_switch = kill_rx
         .fold((), |_a, _b| {
-            log(format!("kill_switch"));
+            // log(format!("kill_switch"));
             err::<(),()>(())
         })
         .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "kill_switch"));
@@ -239,7 +225,10 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char, 
         let msg_tasks = Future::join(msg_inp_task, msg_out_task);
         let mum_tasks = Future::join(mumble_say, mumble_listen);
 
-        core.run(Future::join4(mum_tasks, msg_tasks, app_logic, kill_switch)).unwrap();
+        if let Err(err) = core.run(Future::join4(mum_tasks, msg_tasks, mumble_loop, kill_switch)) {
+        //if let Err(err) = core.run(msg_tasks) {
+            log(format!("rd_netclient_open: {}", err));
+        }
 
         log(format!("core end"));
 

@@ -41,4 +41,7 @@ private:
 
     uint32 SampleRate;
 	uint32 SayActivity = 0;
+
+	TCircularBuffer<int16>* SampleBuffer;
+	uint32 SampleBufferIdx = 0;
 };

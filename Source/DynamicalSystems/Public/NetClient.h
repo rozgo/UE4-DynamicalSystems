@@ -13,6 +13,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FSystemStringMsgDecl, int32, Syst
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FVoiceActivityMsgDecl, int32, NetId, float, Value);
 
+DECLARE_LOG_CATEGORY_EXTERN(RustyNet, Log, All);
+
 UCLASS( ClassGroup=(DynamicalSystems), meta=(BlueprintSpawnableComponent) )
 class DYNAMICALSYSTEMS_API ANetClient : public AActor
 {
@@ -72,7 +74,7 @@ public:
 	FString MumbleServer = "127.0.0.1:8080";
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
-	FString Uuid;
+	int32 Uuid;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
 	int NetIndex = -1;
@@ -87,10 +89,10 @@ public:
     TArray<UNetVoice*> NetVoices;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
-    TMap<FString, float> NetClients;
+    TMap<int32, float> NetClients;
     
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
-    TArray<FString> MappedClients;
+    TArray<int32> MappedClients;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "NetClient")
 	UNetAvatar* Avatar;
