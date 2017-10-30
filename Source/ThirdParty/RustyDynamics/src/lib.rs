@@ -171,7 +171,7 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char, 
 
     let mut client = Box::new(Client{
         sender_pubsub: ffi_tx.wait(),
-        vox: vox_out_tx.wait(),
+        vox: vox_out_tx.clone().wait(),
         task: None,
         msg_queue: Arc::clone(&msg_queue),
         vox_queue: Arc::clone(&vox_queue),
@@ -187,15 +187,18 @@ pub fn rd_netclient_open(local_addr: *const c_char, server_addr: *const c_char, 
 
         let mumble_say = mumblebot::say(vox_out_rx, udp_tx.clone());
 
-        let mumble_listen = vox_inp_rx.fold(vox_queue, |queue, pcm| {
-            {
-                let mut locked_queue = queue.lock().unwrap();
-                locked_queue.push_back(pcm);
-            }
-            ok::<SharedQueue<Vec<u8>>, std::io::Error>(queue)
-            .map_err(|_| ())
-        })
-        .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "vox_inp_task"));
+        mumblebot::gst::sink_main(vox_out_tx.clone());
+        let mumble_listen = mumblebot::gst::src_main(vox_inp_rx);
+
+        // let mumble_listen = vox_inp_rx.fold(vox_queue, |queue, pcm| {
+        //     {
+        //         let mut locked_queue = queue.lock().unwrap();
+        //         locked_queue.push_back(pcm);
+        //     }
+        //     ok::<SharedQueue<Vec<u8>>, std::io::Error>(queue)
+        //     .map_err(|_| ())
+        // })
+        // .map_err(|_| std::io::Error::new(std::io::ErrorKind::Other, "vox_inp_task"));
         
         let udp_socket = UdpSocket::bind(&local_addr, &handle).unwrap();
         let (tx, rx) = udp_socket.framed(LineCodec).split();

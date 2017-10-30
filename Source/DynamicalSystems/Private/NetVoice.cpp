@@ -76,6 +76,8 @@ void UNetVoice::TickComponent( float DeltaTime, ELevelTick TickType, FActorCompo
 	//UE_LOG(LogTemp, Warning, TEXT("UNetVoice::TickComponent %i"), GFrameCounter);
 	Super::TickComponent( DeltaTime, TickType, ThisTickFunction );
 
+	return;
+
 	if (!IsValid(NetClient) || !VoiceCapture.IsValid()) return;
     
 	Activity = 0;

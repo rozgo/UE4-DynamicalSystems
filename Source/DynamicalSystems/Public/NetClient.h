@@ -104,7 +104,7 @@ public:
     FColor ChosenColor;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient")
-	int MissingAvatar = -1;
+	int mumblebot = -1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "NetClient|Debug")
 	bool MirrorSyncY = false;
